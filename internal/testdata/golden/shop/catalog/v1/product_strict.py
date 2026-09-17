@@ -2,8 +2,13 @@
 # source: shop/catalog/v1/product.proto
 """buf.validate rules for shop/catalog/v1/product.proto.
 
-Types come from shop.catalog.v1.product_pb2 and are re-exported here, so one
-import gives a caller both the message class and its annotated field types.
+One typing.Annotated alias per constrained field, over the type
+protoc-gen-python already declared. The message classes stay in
+shop.catalog.v1.product_pb2; import them from there.
+
+A rule with an annotated_types equivalent is carried as that constructor,
+which pydantic, msgspec and beartype enforce. The rest are metadata strings,
+left to protovalidate at runtime.
 """
 
 from __future__ import annotations
@@ -11,21 +16,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Annotated
 
+from annotated_types import Ge, MaxLen, MinLen
+
 from shop.common.v1 import common_pb2 as _shop_common_v1_common_pb2
-from shop.catalog.v1.product_pb2 import (
-    CreateProductRequest as CreateProductRequest,
-    CreateProductResponse as CreateProductResponse,
-    DeleteProductRequest as DeleteProductRequest,
-    DeleteProductResponse as DeleteProductResponse,
-    GetProductRequest as GetProductRequest,
-    GetProductResponse as GetProductResponse,
-    ListProductsRequest as ListProductsRequest,
-    ListProductsResponse as ListProductsResponse,
-    Product as Product,
-    ProductStatus as ProductStatus,
-    UpdateProductRequest as UpdateProductRequest,
-    UpdateProductResponse as UpdateProductResponse,
-)
+from shop.catalog.v1.product_pb2 import Product, ProductStatus
 
 # Product is the catalog resource.
 # cel[product.discount_below_price]: !has(this.discount_price) || this.discount_price.units < this.price.units
@@ -42,18 +36,18 @@ ProductId = Annotated[
 ]
 ProductSku = Annotated[
     str,
-    "string.max_len = 32",
-    "string.min_len = 3",
+    MaxLen(32),
+    MinLen(3),
     "string.pattern = ^[A-Z0-9]+(-[A-Z0-9]+)*$",
 ]
 ProductName = Annotated[
     str,
-    "string.max_len = 200",
-    "string.min_len = 1",
+    MaxLen(200),
+    MinLen(1),
 ]
 ProductDescription = Annotated[
     str,
-    "string.max_len = 4096",
+    MaxLen(4096),
 ]
 ProductPrice = Annotated[
     _shop_common_v1_common_pb2.Money,
@@ -68,12 +62,12 @@ ProductTags = Annotated[
     "repeated.items.string.max_len = 40",
     "repeated.items.string.min_len = 1",
     "repeated.items.string.pattern = ^[a-z0-9-]+$",
-    "repeated.max_items = 20",
+    MaxLen(20),
     "repeated.unique = true",
 ]
 ProductLabels = Annotated[
     Mapping[str, str],
-    "map.max_pairs = 16",
+    MaxLen(16),
 ]
 ProductCreatedByEmail = Annotated[
     str,
@@ -84,7 +78,7 @@ ProductCreatedByEmail = Annotated[
 ]
 ProductVersion = Annotated[
     int,
-    "int64.gte = 0",
+    Ge(0),
 ]
 
 # CreateProductRequest creates a new product.
@@ -111,7 +105,7 @@ GetProductRequestId = Annotated[
 ]
 GetProductRequestSku = Annotated[
     str,
-    "string.min_len = 3",
+    MinLen(3),
 ]
 
 # GetProductResponse returns a single product.
@@ -132,8 +126,8 @@ ListProductsRequestStatuses = Annotated[
 ]
 ListProductsRequestNameContains = Annotated[
     str,
-    "string.max_len = 200",
-    "string.min_len = 1",
+    MaxLen(200),
+    MinLen(1),
 ]
 ListProductsRequestOrderBy = Annotated[
     str,
@@ -147,7 +141,7 @@ ListProductsRequestOrderDirection = Annotated[
 # ListProductsResponse is one page of products.
 ListProductsResponseTotalSize = Annotated[
     int,
-    "int64.gte = 0",
+    Ge(0),
 ]
 
 # UpdateProductRequest performs a partial update.
@@ -170,7 +164,7 @@ DeleteProductRequestId = Annotated[
 ]
 DeleteProductRequestExpectedVersion = Annotated[
     int,
-    "int64.gte = 0",
+    Ge(0),
 ]
 
 # DeleteProductResponse is intentionally empty.

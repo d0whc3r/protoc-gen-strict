@@ -2,8 +2,13 @@
 # source: example/v1/user.proto
 """buf.validate rules for example/v1/user.proto.
 
-Types come from example.v1.user_pb2 and are re-exported here, so one
-import gives a caller both the message class and its annotated field types.
+One typing.Annotated alias per constrained field, over the type
+protoc-gen-python already declared. The message classes stay in
+example.v1.user_pb2; import them from there.
+
+A rule with an annotated_types equivalent is carried as that constructor,
+which pydantic, msgspec and beartype enforce. The rest are metadata strings,
+left to protovalidate at runtime.
 """
 
 from __future__ import annotations
@@ -11,16 +16,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Annotated
 
-from example.v1.user_pb2 import (
-    Address as Address,
-    User as User,
-)
+from annotated_types import Gt, Le, MaxLen, MinLen
 
 # User demonstrates standard buf.validate rules alongside custom CEL rules.
 UserId = Annotated[
     str,
-    "string.max_len = 64",
-    "string.min_len = 5",
+    MaxLen(64),
+    MinLen(5),
     "cel[user.id.prefix]: this.startsWith('usr_')",
     "  message: id must start with 'usr_'",
     "  refs: this",
@@ -33,13 +35,13 @@ UserEmail = Annotated[
 ]
 UserDisplayName = Annotated[
     str,
-    "string.min_len = 3",
+    MinLen(3),
     "string.pattern = ^[a-zA-Z0-9_ ]+$",
 ]
 UserAge = Annotated[
     int,
-    "int32.gt = 0",
-    "int32.lte = 130",
+    Gt(0),
+    Le(130),
 ]
 UserLoginCount = Annotated[
     int,
@@ -50,17 +52,18 @@ UserLoginCount = Annotated[
 UserRoles = Annotated[
     Sequence[str],
     "repeated.items.string.min_len = 1",
-    "repeated.min_items = 1",
+    MinLen(1),
     "repeated.unique = true",
 ]
 
 # Address is referenced by User to exercise message-typed fields.
 AddressCountry = Annotated[
     str,
-    "string.len = 2",
+    MinLen(2),
+    MaxLen(2),
 ]
 AddressPostalCode = Annotated[
     str,
-    "string.min_len = 3",
+    MinLen(3),
 ]
 

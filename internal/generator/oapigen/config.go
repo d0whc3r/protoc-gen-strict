@@ -4,7 +4,6 @@ package oapigen
 
 import (
 	"slices"
-	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
@@ -17,11 +16,6 @@ import (
 // are fully qualified proto names, so there is nothing per-directory to shard —
 // which is why the plugin entry needs `strategy: all`.
 const openAPIConfigFile = "openapi_config.yaml"
-
-// repeatedItems prefixes the rules that describe a list's elements rather than
-// the list. protoc-gen-openapiv2 puts every scalar keyword of an array field on
-// its `items`, so these map through the same table as the singular forms.
-const repeatedItems = "repeated.items."
 
 // WriteConfig writes the grpc-gateway OpenAPI configuration that carries
 // the buf.validate rules into protoc-gen-openapiv2's output.
@@ -85,9 +79,9 @@ func fieldKeywords(field parser.FieldMetadata) []keyword {
 	// `repeated.items.ignore` says the same of the element rules, which
 	// grpc-gateway puts on the array's `items`. The two are independent: a list
 	// whose elements are ignored still has its own min_items.
-	_, itemsIgnored := emit.RuleValue(field, repeatedItems+emit.IgnoreRule)
+	_, itemsIgnored := emit.RuleValue(field, emit.RepeatedItems+emit.IgnoreRule)
 
-	reversed := reversedBounds(field.Rules)
+	reversed := emit.ReversedBounds(field.Rules)
 
 	// `required` is absent on purpose. grpc-gateway hoists it into the parent
 	// message's required list, which is right for a body schema — but the same
@@ -96,7 +90,7 @@ func fieldKeywords(field parser.FieldMetadata) []keyword {
 	// than leaving the rule to runtime validation.
 	var out []keyword
 	for _, rule := range field.Rules {
-		if itemsIgnored && strings.HasPrefix(rule.Kind, repeatedItems) {
+		if itemsIgnored && strings.HasPrefix(rule.Kind, emit.RepeatedItems) {
 			continue
 		}
 		if reversed[rule.Kind] {
@@ -110,56 +104,4 @@ func fieldKeywords(field parser.FieldMetadata) []keyword {
 		}
 	}
 	return out
-}
-
-// reversedBounds names the bound rules with no JSONSchema equivalent.
-//
-// protovalidate reads a lower bound above the upper one as a reversed range:
-// `{gt: 20, lt: 10}` admits everything outside 10..20, not the empty set. A
-// JSONSchema `minimum` and `maximum` are a conjunction with no way to say "or",
-// and emitting them as written would produce a schema no value satisfies, so
-// both bounds are left to runtime validation.
-func reversedBounds(rules []parser.Rule) map[string]bool {
-	lower, upper := map[string]parser.Rule{}, map[string]parser.Rule{}
-	for _, rule := range rules {
-		root, leaf, ok := boundRoot(rule.Kind)
-		if !ok {
-			continue
-		}
-		switch leaf {
-		case "gt", "gte":
-			lower[root] = rule
-		case "lt", "lte":
-			upper[root] = rule
-		}
-	}
-
-	out := map[string]bool{}
-	for root, lo := range lower {
-		hi, ok := upper[root]
-		if !ok {
-			continue
-		}
-		loValue, loErr := strconv.ParseFloat(lo.Value, 64)
-		hiValue, hiErr := strconv.ParseFloat(hi.Value, 64)
-		if loErr != nil || hiErr != nil || loValue <= hiValue {
-			continue
-		}
-		out[lo.Kind], out[hi.Kind] = true, true
-	}
-	return out
-}
-
-// boundRoot splits a numeric bound rule into the rule message holding it and the
-// bound itself: "repeated.items.int32.gt" is "repeated.items.int32" and "gt".
-// Two bounds only describe one range when they share a root.
-func boundRoot(kind string) (string, string, bool) {
-	prefix, leaf, ok := strings.Cut(strings.TrimPrefix(kind, repeatedItems), ".")
-	if !ok {
-		return "", "", false
-	}
-	if _, ok := boundedTypes[prefix]; !ok {
-		return "", "", false
-	}
-	return strings.TrimSuffix(kind, "."+leaf), leaf, true
 }

@@ -177,7 +177,7 @@ item list narrows along with it.
 valid-type slot reports the strict type:
 
 ```ts
-export const CreateProductRequestStrictSchema: GenMessage<CreateProductRequest, { validType: CreateProductRequestStrict }> =
+export const CreateProductRequestStrictSchema =
   CreateProductRequestSchema as GenMessage<CreateProductRequest, { validType: CreateProductRequestStrict }>;
 ```
 
@@ -292,10 +292,10 @@ become types and what each turns into.
 
 ## Python
 
-Python gets no narrowing. A protobuf message class is built by a metaclass and
-exposes no structural type to intersect with, so `_strict.py` emits a
-`typing.Annotated` alias per constrained field instead, which makes the rules
-visible at the call site:
+Python has no way to narrow a type: a protobuf message class is built by a
+metaclass and exposes no structural type to intersect with. So `_strict.py`
+emits a `typing.Annotated` alias per constrained field instead, which makes the
+rules visible at the call site:
 
 ```python
 from example.v1.user_strict import UserId
@@ -303,8 +303,25 @@ from example.v1.user_strict import UserId
 def promote(user_id: UserId) -> None: ...   # not `user_id: str`
 ```
 
-The message classes are re-exported from the same module, so one import covers
-both.
+A rule with an [annotated_types](https://github.com/annotated-types/annotated-types)
+equivalent is carried as that constructor, which pydantic, msgspec and beartype
+enforce. Everything else stays a metadata string, named but left to
+protovalidate at runtime:
+
+```python
+UserDisplayName = Annotated[
+    str,
+    MinLen(3),
+    "string.pattern = ^[a-zA-Z0-9_ ]+$",
+]
+```
+
+That makes `annotated_types` a dependency of the generated Python — a pure
+Python package with none of its own.
+
+The overlay is annotations and nothing else. It imports a message class only
+where an alias names one, and never re-exports: the classes stay in the
+`_pb2` module protoc-gen-python wrote them in.
 
 ## What it understands
 
@@ -324,7 +341,8 @@ the rest of the file.
 
 ## Current limitations
 
-- Python cannot narrow, for the reason above.
+- Python carries only the bounds and lengths `annotated_types` spells; every
+  other rule is a string there, and nothing reads it.
 - `repeated.min_items = 3` narrows to "not empty", not to a 3-element tuple.
 - Rules on `repeated.items` describe the element; the element type is left alone.
 - A field with `ignore` set gets no narrowing at all, since under-narrowing is

@@ -18,16 +18,16 @@ func (f *tsFile) strictSchema(msg parser.MessageMetadata) {
 	name := f.ctx.tsName(msg.Name)
 	strict := f.strictRef(msg.Name)
 	schema := f.declare(name + "StrictSchema")
-	// Annotation as well as cast: TypeScript copies an annotation into a .d.ts
-	// verbatim, while an inferred type is printed alias-expanded, dropping the
-	// imports the expansion needs.
+	// The cast is the only place the type is written. A declaration file prints
+	// the asserted type verbatim, so annotating the const as well would repeat
+	// the whole generic on the line above it.
 	typ := f.gen("GenMessage") + "<" + f.shape(name) + ", { validType: " + strict + " }>"
 	f.doc("", []string{
 		"Describes " + msg.Name + ", reporting " + strict + " as its valid type.",
 		"The same descriptor protoc-gen-es generated, so the wire format and the identity",
 		"this has as a query key are unchanged — only what `MessageValidType` reports differs.",
 	})
-	f.P("export const ", schema, ": ", typ, " =")
+	f.P("export const ", schema, " =")
 	f.P("  ", f.value(name+"Schema"), " as ", typ, ";")
 	f.P()
 }
@@ -56,7 +56,7 @@ func (f *tsFile) service(service *protogen.Service) {
 		"The same service descriptor protoc-gen-es generated, retyped so every method reports",
 		"the strict input and output types.",
 	))
-	f.P("export const ", strict, ": ", descriptor, " =")
+	f.P("export const ", strict, " =")
 	f.P("  ", f.value(name), " as ", descriptor, ";")
 	f.P()
 }

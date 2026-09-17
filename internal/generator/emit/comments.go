@@ -33,7 +33,7 @@ func MessageComments(msg parser.MessageMetadata) []string {
 	for _, oneof := range msg.Oneofs {
 		lines = append(lines, OneofLine(oneof))
 	}
-	return append(lines, celComments(msg.CEL)...)
+	return append(lines, CELComments(msg.CEL)...)
 }
 
 // OneofLine describes one exclusivity constraint, real oneof or not; the
@@ -53,17 +53,17 @@ func OneofLine(oneof parser.OneofMetadata) string {
 func RuleComments(field parser.FieldMetadata) []string {
 	var lines []string
 	if field.Required {
-		lines = append(lines, "required")
+		lines = append(lines, RequiredRule)
 	}
 	for _, rule := range field.Rules {
-		lines = append(lines, fmt.Sprintf("%s = %s", rule.Kind, rule.Value))
+		lines = append(lines, RuleLine(rule))
 	}
-	return append(lines, celComments(field.CEL)...)
+	return append(lines, CELComments(field.CEL)...)
 }
 
-// celComments renders CEL rules, field- and message-level, with what the parsed
+// CELComments renders CEL rules, field- and message-level, with what the parsed
 // AST says they reference and call.
-func celComments(rules []parser.CELRule) []string {
+func CELComments(rules []parser.CELRule) []string {
 	var lines []string
 	for _, rule := range rules {
 		label := CELLabel(rule)

@@ -350,7 +350,7 @@ export type AmbiguityCoverageStrict = Require<Narrow<AmbiguityCoverage, {
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const StringRuleCoverageStrictSchema: GenMessage<StringRuleCoverage, { validType: StringRuleCoverageStrict }> =
+export const StringRuleCoverageStrictSchema =
   StringRuleCoverageSchema as GenMessage<StringRuleCoverage, { validType: StringRuleCoverageStrict }>;
 
 type CoverageServiceStrictDescriptor = GenService<{
@@ -373,6 +373,6 @@ type CoverageServiceStrictDescriptor = GenService<{
  * The same service descriptor protoc-gen-es generated, retyped so every method reports
  * the strict input and output types.
  */
-export const CoverageServiceStrict: CoverageServiceStrictDescriptor =
+export const CoverageServiceStrict =
   CoverageService as CoverageServiceStrictDescriptor;
 

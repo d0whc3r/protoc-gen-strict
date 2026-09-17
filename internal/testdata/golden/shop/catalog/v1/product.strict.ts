@@ -201,7 +201,7 @@ export type DeleteProductResponseStrict = DeleteProductResponse;
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const CreateProductRequestStrictSchema: GenMessage<CreateProductRequest, { validType: CreateProductRequestStrict }> =
+export const CreateProductRequestStrictSchema =
   CreateProductRequestSchema as GenMessage<CreateProductRequest, { validType: CreateProductRequestStrict }>;
 
 /**
@@ -209,7 +209,7 @@ export const CreateProductRequestStrictSchema: GenMessage<CreateProductRequest, 
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const CreateProductResponseStrictSchema: GenMessage<CreateProductResponse, { validType: CreateProductResponseStrict }> =
+export const CreateProductResponseStrictSchema =
   CreateProductResponseSchema as GenMessage<CreateProductResponse, { validType: CreateProductResponseStrict }>;
 
 /**
@@ -217,7 +217,7 @@ export const CreateProductResponseStrictSchema: GenMessage<CreateProductResponse
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const GetProductRequestStrictSchema: GenMessage<GetProductRequest, { validType: GetProductRequestStrict }> =
+export const GetProductRequestStrictSchema =
   GetProductRequestSchema as GenMessage<GetProductRequest, { validType: GetProductRequestStrict }>;
 
 /**
@@ -225,7 +225,7 @@ export const GetProductRequestStrictSchema: GenMessage<GetProductRequest, { vali
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const GetProductResponseStrictSchema: GenMessage<GetProductResponse, { validType: GetProductResponseStrict }> =
+export const GetProductResponseStrictSchema =
   GetProductResponseSchema as GenMessage<GetProductResponse, { validType: GetProductResponseStrict }>;
 
 /**
@@ -233,7 +233,7 @@ export const GetProductResponseStrictSchema: GenMessage<GetProductResponse, { va
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const ListProductsRequestStrictSchema: GenMessage<ListProductsRequest, { validType: ListProductsRequestStrict }> =
+export const ListProductsRequestStrictSchema =
   ListProductsRequestSchema as GenMessage<ListProductsRequest, { validType: ListProductsRequestStrict }>;
 
 /**
@@ -241,7 +241,7 @@ export const ListProductsRequestStrictSchema: GenMessage<ListProductsRequest, { 
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const ListProductsResponseStrictSchema: GenMessage<ListProductsResponse, { validType: ListProductsResponseStrict }> =
+export const ListProductsResponseStrictSchema =
   ListProductsResponseSchema as GenMessage<ListProductsResponse, { validType: ListProductsResponseStrict }>;
 
 /**
@@ -249,7 +249,7 @@ export const ListProductsResponseStrictSchema: GenMessage<ListProductsResponse, 
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const UpdateProductRequestStrictSchema: GenMessage<UpdateProductRequest, { validType: UpdateProductRequestStrict }> =
+export const UpdateProductRequestStrictSchema =
   UpdateProductRequestSchema as GenMessage<UpdateProductRequest, { validType: UpdateProductRequestStrict }>;
 
 /**
@@ -257,7 +257,7 @@ export const UpdateProductRequestStrictSchema: GenMessage<UpdateProductRequest, 
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const UpdateProductResponseStrictSchema: GenMessage<UpdateProductResponse, { validType: UpdateProductResponseStrict }> =
+export const UpdateProductResponseStrictSchema =
   UpdateProductResponseSchema as GenMessage<UpdateProductResponse, { validType: UpdateProductResponseStrict }>;
 
 /**
@@ -265,7 +265,7 @@ export const UpdateProductResponseStrictSchema: GenMessage<UpdateProductResponse
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const DeleteProductRequestStrictSchema: GenMessage<DeleteProductRequest, { validType: DeleteProductRequestStrict }> =
+export const DeleteProductRequestStrictSchema =
   DeleteProductRequestSchema as GenMessage<DeleteProductRequest, { validType: DeleteProductRequestStrict }>;
 
 type CatalogServiceStrictDescriptor = GenService<{
@@ -306,6 +306,6 @@ type CatalogServiceStrictDescriptor = GenService<{
  * The same service descriptor protoc-gen-es generated, retyped so every method reports
  * the strict input and output types.
  */
-export const CatalogServiceStrict: CatalogServiceStrictDescriptor =
+export const CatalogServiceStrict =
   CatalogService as CatalogServiceStrictDescriptor;
 

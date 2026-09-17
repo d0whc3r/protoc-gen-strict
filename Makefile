@@ -37,7 +37,7 @@ verify: build
 	PATH="$(CURDIR)/bin:$$PATH" buf generate --include-imports -o $(VERIFY)
 	cd $(VERIFY) && npm install --silent --no-audit --no-fund && npx tsc --noEmit
 	python3 -m venv $(VERIFY)/venv
-	$(VERIFY)/venv/bin/pip install -q protobuf
+	$(VERIFY)/venv/bin/pip install -q protobuf annotated_types
 	$(VERIFY)/venv/bin/python $(VERIFY)/assert.py
 
 # --- test -------------------------------------------------------------------

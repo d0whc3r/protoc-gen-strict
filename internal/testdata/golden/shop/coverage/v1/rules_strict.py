@@ -2,8 +2,13 @@
 # source: shop/coverage/v1/rules.proto
 """buf.validate rules for shop/coverage/v1/rules.proto.
 
-Types come from shop.coverage.v1.rules_pb2 and are re-exported here, so one
-import gives a caller both the message class and its annotated field types.
+One typing.Annotated alias per constrained field, over the type
+protoc-gen-python already declared. The message classes stay in
+shop.coverage.v1.rules_pb2; import them from there.
+
+A rule with an annotated_types equivalent is carried as that constructor,
+which pydantic, msgspec and beartype enforce. The rest are metadata strings,
+left to protovalidate at runtime.
 """
 
 from __future__ import annotations
@@ -11,31 +16,23 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Annotated
 
+from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen
+
 from google.protobuf import any_pb2 as _google_protobuf_any_pb2
 from google.protobuf import duration_pb2 as _google_protobuf_duration_pb2
 from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
-from shop.coverage.v1.rules_pb2 import (
-    AmbiguityCoverage as AmbiguityCoverage,
-    CelNarrowingCoverage as CelNarrowingCoverage,
-    CelRuleCoverage as CelRuleCoverage,
-    CollectionRuleCoverage as CollectionRuleCoverage,
-    Flavor as Flavor,
-    NumericRuleCoverage as NumericRuleCoverage,
-    PresenceRuleCoverage as PresenceRuleCoverage,
-    ScalarRuleCoverage as ScalarRuleCoverage,
-    StringRuleCoverage as StringRuleCoverage,
-    WellKnownRuleCoverage as WellKnownRuleCoverage,
-)
+from shop.coverage.v1.rules_pb2 import Flavor, NumericRuleCoverage, StringRuleCoverage
 
 # StringRuleCoverage exercises the string rule family, including the well-known format rules that live in a oneof inside StringRules.
 StringRuleCoverageExactLen = Annotated[
     str,
-    "string.len = 10",
+    MinLen(10),
+    MaxLen(10),
 ]
 StringRuleCoverageLenBounds = Annotated[
     str,
-    "string.max_len = 64",
-    "string.min_len = 2",
+    MaxLen(64),
+    MinLen(2),
 ]
 StringRuleCoverageByteBounds = Annotated[
     str,
@@ -114,51 +111,51 @@ StringRuleCoverageHeaderName = Annotated[
 # NumericRuleCoverage exercises every numeric rule family. protovalidate declares a separate rule message per wire type, so each one is walked separately by the parser.
 NumericRuleCoverageI32 = Annotated[
     int,
-    "int32.gt = 0",
-    "int32.lt = 1000",
+    Gt(0),
+    Lt(1000),
 ]
 NumericRuleCoverageI64 = Annotated[
     int,
-    "int64.gte = -9000",
-    "int64.lte = 9000",
+    Ge(-9000),
+    Le(9000),
 ]
 NumericRuleCoverageU32 = Annotated[
     int,
-    "uint32.lte = 65535",
+    Le(65535),
 ]
 NumericRuleCoverageU64 = Annotated[
     int,
-    "uint64.gte = 1",
+    Ge(1),
 ]
 NumericRuleCoverageS32 = Annotated[
     int,
-    "sint32.gte = -128",
+    Ge(-128),
 ]
 NumericRuleCoverageS64 = Annotated[
     int,
-    "sint64.lte = 1024",
+    Le(1024),
 ]
 NumericRuleCoverageF32 = Annotated[
     int,
-    "fixed32.gt = 0",
+    Gt(0),
 ]
 NumericRuleCoverageF64 = Annotated[
     int,
-    "fixed64.gt = 0",
+    Gt(0),
 ]
 NumericRuleCoverageSf32 = Annotated[
     int,
-    "sfixed32.lt = 0",
+    Lt(0),
 ]
 NumericRuleCoverageSf64 = Annotated[
     int,
-    "sfixed64.lt = 0",
+    Lt(0),
 ]
 NumericRuleCoverageRatio = Annotated[
     float,
     "float.finite = true",
-    "float.gte = 0",
-    "float.lte = 1",
+    Ge(0),
+    Le(1),
 ]
 NumericRuleCoverageFactor = Annotated[
     float,
@@ -180,12 +177,13 @@ ScalarRuleCoverageAccepted = Annotated[
 ]
 ScalarRuleCoveragePayload = Annotated[
     bytes,
-    "bytes.max_len = 4096",
-    "bytes.min_len = 1",
+    MaxLen(4096),
+    MinLen(1),
 ]
 ScalarRuleCoverageSignature = Annotated[
     bytes,
-    "bytes.len = 32",
+    MinLen(32),
+    MaxLen(32),
     "bytes.prefix = [1 2]",
 ]
 ScalarRuleCoverageRemoteIp = Annotated[
@@ -241,8 +239,8 @@ WellKnownRuleCoverageDetail = Annotated[
 CollectionRuleCoverageNames = Annotated[
     Sequence[str],
     "repeated.items.string.min_len = 1",
-    "repeated.max_items = 10",
-    "repeated.min_items = 1",
+    MaxLen(10),
+    MinLen(1),
     "repeated.unique = true",
 ]
 CollectionRuleCoverageFlavors = Annotated[
@@ -252,30 +250,30 @@ CollectionRuleCoverageFlavors = Annotated[
 ]
 CollectionRuleCoverageNested = Annotated[
     Sequence[StringRuleCoverage],
-    "repeated.max_items = 4",
+    MaxLen(4),
 ]
 CollectionRuleCoverageCounters = Annotated[
     Mapping[str, int],
     "map.keys.string.min_len = 1",
     "map.keys.string.pattern = ^[a-z_]+$",
-    "map.max_pairs = 50",
-    "map.min_pairs = 1",
+    MaxLen(50),
+    MinLen(1),
     "map.values.int32.gte = 0",
 ]
 CollectionRuleCoverageReadings = Annotated[
     Mapping[str, NumericRuleCoverage],
-    "map.max_pairs = 8",
+    MaxLen(8),
 ]
 
 # PresenceRuleCoverage exercises required, optional and the ignore modes that decide when the other rules are evaluated at all.
 PresenceRuleCoverageRequiredValue = Annotated[
     str,
     "required",
-    "string.min_len = 1",
+    MinLen(1),
 ]
 PresenceRuleCoverageOptionalValue = Annotated[
     str,
-    "string.min_len = 3",
+    MinLen(3),
 ]
 PresenceRuleCoverageSkipWhenEmpty = Annotated[
     str,
@@ -322,7 +320,7 @@ CelRuleCoverageWindowStart = Annotated[
 ]
 CelRuleCoverageWindowEnd = Annotated[
     int,
-    "int32.lte = 1440",
+    Le(1440),
     "cel[cel_coverage.window_end.quarter_hour]: this % 15 == 0",
     "  message: window_end must fall on a quarter hour",
     "  refs: this",
@@ -386,7 +384,7 @@ AmbiguityCoverageUserId = Annotated[
 ]
 AmbiguityCoverageConstructor = Annotated[
     str,
-    "string.min_len = 1",
+    MinLen(1),
 ]
 AmbiguityCoverageEmail = Annotated[
     str,
@@ -394,7 +392,7 @@ AmbiguityCoverageEmail = Annotated[
 ]
 AmbiguityCoveragePhone = Annotated[
     str,
-    "string.min_len = 5",
+    MinLen(5),
 ]
 AmbiguityCoverageUncheckedDetail = Annotated[
     StringRuleCoverage,

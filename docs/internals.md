@@ -294,8 +294,10 @@ replacing it. Two details fall out of that:
 Python gets none of this. A protobuf message class is built by a metaclass and
 has no structural type to intersect with, so the generator emits `Annotated`
 aliases instead: a name per constrained field, carrying the field type and its
-rules. TypeScript rules out illegal states; Python only labels them. See
-[Rule coverage: Python](rule-coverage-python.md).
+rules. A rule `annotated_types` can spell is carried as that constructor, which
+pydantic, msgspec and beartype enforce; the rest are strings. TypeScript rules
+out illegal states at compile time; Python hands them to a validator that reads
+the metadata. See [Rule coverage: Python](rule-coverage-python.md).
 
 The OpenAPI target narrows nothing either, but for the opposite reason: there is
 no type to narrow, only a JSONSchema to attach. `oapigen` maps each rule to

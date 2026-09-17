@@ -2,8 +2,13 @@
 # source: shop/inventory/v1/warehouse.proto
 """buf.validate rules for shop/inventory/v1/warehouse.proto.
 
-Types come from shop.inventory.v1.warehouse_pb2 and are re-exported here, so one
-import gives a caller both the message class and its annotated field types.
+One typing.Annotated alias per constrained field, over the type
+protoc-gen-python already declared. The message classes stay in
+shop.inventory.v1.warehouse_pb2; import them from there.
+
+A rule with an annotated_types equivalent is carried as that constructor,
+which pydantic, msgspec and beartype enforce. The rest are metadata strings,
+left to protovalidate at runtime.
 """
 
 from __future__ import annotations
@@ -11,16 +16,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Annotated
 
+from annotated_types import Ge, Le, MaxLen, MinLen
+
 from google.protobuf import duration_pb2 as _google_protobuf_duration_pb2
 from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
-from shop.inventory.v1.warehouse_pb2 import (
-    ContactPoint as ContactPoint,
-    OpeningHours as OpeningHours,
-    StockLevel as StockLevel,
-    StockMovement as StockMovement,
-    StockMovementKind as StockMovementKind,
-    Warehouse as Warehouse,
-)
+from shop.inventory.v1.warehouse_pb2 import ContactPoint, OpeningHours, StockMovementKind, Warehouse
 
 # Warehouse is a physical stocking location.
 WarehouseId = Annotated[
@@ -29,8 +29,8 @@ WarehouseId = Annotated[
 ]
 WarehouseName = Annotated[
     str,
-    "string.max_len = 120",
-    "string.min_len = 1",
+    MaxLen(120),
+    MinLen(1),
 ]
 WarehouseAddress = Annotated[
     Warehouse.Address,
@@ -44,35 +44,36 @@ WarehouseMaxDwellTime = Annotated[
 WarehouseOpeningHours = Annotated[
     Mapping[str, OpeningHours],
     "map.keys.string.in = [mon, tue, wed, thu, fri, sat, sun]",
-    "map.max_pairs = 7",
+    MaxLen(7),
 ]
 WarehouseContacts = Annotated[
     Sequence[ContactPoint],
-    "repeated.min_items = 1",
+    MinLen(1),
 ]
 
 # Address is nested to check that nested messages are walked.
 WarehouseAddressLine1 = Annotated[
     str,
-    "string.min_len = 1",
+    MinLen(1),
 ]
 WarehouseAddressLine2 = Annotated[
     str,
-    "string.max_len = 120",
+    MaxLen(120),
 ]
 WarehouseAddressCity = Annotated[
     str,
-    "string.min_len = 1",
+    MinLen(1),
 ]
 WarehouseAddressCountryCode = Annotated[
     str,
-    "string.len = 2",
+    MinLen(2),
+    MaxLen(2),
     "string.pattern = ^[A-Z]{2}$",
 ]
 WarehouseAddressPostalCode = Annotated[
     str,
-    "string.max_len = 12",
-    "string.min_len = 3",
+    MaxLen(12),
+    MinLen(3),
 ]
 
 # OpeningHours is a daily window expressed in minutes past midnight.
@@ -82,18 +83,18 @@ WarehouseAddressPostalCode = Annotated[
 #   calls: _>_
 OpeningHoursOpensAtMinute = Annotated[
     int,
-    "uint32.lte = 1439",
+    Le(1439),
 ]
 OpeningHoursClosesAtMinute = Annotated[
     int,
-    "uint32.lte = 1440",
+    Le(1440),
 ]
 
 # ContactPoint reaches a person by exactly one channel.
 # required oneof channel: exactly one of email, phone, extension
 ContactPointName = Annotated[
     str,
-    "string.min_len = 1",
+    MinLen(1),
 ]
 ContactPointEmail = Annotated[
     str,
@@ -105,8 +106,8 @@ ContactPointPhone = Annotated[
 ]
 ContactPointExtension = Annotated[
     int,
-    "uint32.gte = 100",
-    "uint32.lte = 9999",
+    Ge(100),
+    Le(9999),
 ]
 
 # StockMovement records one change to the stock level of a product.
@@ -136,8 +137,8 @@ StockMovementKind_ = Annotated[
 ]
 StockMovementQuantityDelta = Annotated[
     int,
-    "sint32.gte = -100000",
-    "sint32.lte = 100000",
+    Ge(-100000),
+    Le(100000),
 ]
 StockMovementOccurredAt = Annotated[
     _google_protobuf_timestamp_pb2.Timestamp,
@@ -146,11 +147,11 @@ StockMovementOccurredAt = Annotated[
 ]
 StockMovementPurchaseOrderId = Annotated[
     str,
-    "string.max_len = 64",
+    MaxLen(64),
 ]
 StockMovementCustomerOrderId = Annotated[
     str,
-    "string.max_len = 64",
+    MaxLen(64),
 ]
 
 # StockLevel is the current quantity of a product in a warehouse.
@@ -164,11 +165,11 @@ StockLevelProductId = Annotated[
 ]
 StockLevelOnHand = Annotated[
     int,
-    "uint64.lte = 100000000",
+    Le(100000000),
 ]
 StockLevelReserved = Annotated[
     int,
-    "uint64.lte = 100000000",
+    Le(100000000),
 ]
 StockLevelCountedAt = Annotated[
     _google_protobuf_timestamp_pb2.Timestamp,

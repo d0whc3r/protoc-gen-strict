@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/d0whc3r/protoc-gen-strict/internal/generator/emit"
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
 
@@ -17,6 +18,8 @@ const (
 )
 
 // boundedTypes are the numeric rule prefixes whose bounds become JSON numbers.
+// A rule under emit.RepeatedItems maps through the same table: protoc-gen-openapiv2
+// puts every scalar keyword of an array field on its `items`.
 //
 // The 64-bit integers are absent on purpose: JSON carries them as strings, and
 // protoc-gen-openapiv2 types them `{"type": "string", "format": "int64"}`, where
@@ -47,7 +50,7 @@ type keyword struct {
 // ruleKeywords maps one protovalidate rule onto JSONSchema keywords. A rule
 // with no equivalent yields none: under-narrowing is the safe direction.
 func ruleKeywords(rule parser.Rule) []keyword {
-	prefix, leaf, ok := strings.Cut(strings.TrimPrefix(rule.Kind, repeatedItems), ".")
+	prefix, leaf, ok := strings.Cut(strings.TrimPrefix(rule.Kind, emit.RepeatedItems), ".")
 	if !ok {
 		return nil
 	}

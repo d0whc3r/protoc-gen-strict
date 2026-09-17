@@ -6,30 +6,81 @@ What the Python overlay carries, and how each TypeScript narrowing reads here.
 
 A protobuf message class is built by a metaclass and exposes no structural type
 to intersect with. There is no `Narrow`, no `Require` and no brand to apply, so
-`<file>_strict.py` carries the rules as data instead: one `typing.Annotated`
+`<file>_strict.py` carries the rules as metadata instead: one `typing.Annotated`
 alias per constrained field, holding the type protoc-gen-pyi declared followed
-by every rule on that field as a string. The message classes are re-exported, so
-a caller needs one import for both.
+by every rule on that field. The message classes are not re-exported: a caller
+imports those from the `_pb2` module protoc-gen-python wrote them in.
+
+A rule with an [annotated_types](https://github.com/annotated-types/annotated-types)
+equivalent is carried as that constructor. That vocabulary is what pydantic,
+msgspec and beartype all read, so those rules are enforced rather than merely
+described — which makes `annotated_types` a dependency of the generated code. It
+is pure Python and has none of its own.
+
+The rest stay strings: named, so nothing disappears quietly, and left to
+protovalidate at runtime.
 
 ```python
-from example.v1.user_pb2 import (
-    User as User,
-)
+from annotated_types import MaxLen, MinLen
 
 UserEmail = Annotated[
     str,
     "required",
     "string.email = true",
 ]
+UserId = Annotated[
+    str,
+    MaxLen(64),
+    MinLen(5),
+    "cel[user.id.prefix]: this.startsWith('usr_')",
+]
 ```
+
+## What reaches annotated_types
+
+| Rule | Constructor |
+|---|---|
+| `string.min_len`, `bytes.min_len` | `MinLen` |
+| `string.max_len`, `bytes.max_len` | `MaxLen` |
+| `string.len`, `bytes.len` | `MinLen` and `MaxLen` at the same value, which is what `Len(n, n)` unpacks into |
+| `repeated.min_items`, `map.min_pairs` | `MinLen` |
+| `repeated.max_items`, `map.max_pairs` | `MaxLen` |
+| every numeric type's `.gt`, `.gte`, `.lt`, `.lte` | `Gt`, `Ge`, `Lt`, `Le` |
+
+The bound is emitted as the parser printed it. Unlike the OpenAPI target there
+is no 64-bit exclusion and no rounding: a Python `int` is arbitrary precision,
+and protoc-gen-pyi types every integer width as `int`.
+
+### What is deliberately not carried
+
+- **`string.min_bytes` and `max_bytes`.** They count UTF-8 bytes; `MinLen` on a
+  `str` counts code points, which is the wrong quantity for a non-ASCII value.
+- **Rules under `repeated.items`, `map.keys` and `map.values`.** They describe an
+  element, and the alias annotates the collection — a `MinLen` there would count
+  the wrong thing.
+- **`duration` and `timestamp` bounds.** Their value is a message, and the parser
+  prints one rule per sub-field (`duration.gte.seconds`), which is not a number
+  to compare the field against.
+- **A field with `ignore` set,** for the reason the other targets drop it: the
+  sibling rules do not always apply, so none of them describes the type either.
+- **A reversed numeric range,** where protovalidate reads a lower bound above the
+  upper one as "outside that range". `Gt(20)` and `Lt(10)` next to each other are
+  a conjunction no value satisfies, which narrows harder than the proto asked.
+- **`float.finite`, `string.pattern` and the format rules.** `annotated_types` has
+  `IsFinite` and `Predicate`, but no type checker or validator reads them widely
+  enough to be worth the over-narrowing risk.
+- **`const`, `in` and `not_in`.** The IR holds rule values already rendered for
+  display, and re-parsing a list out of that form is the same fragility the other
+  targets declined.
 
 The alias name is the message name and the field name, so `User.email` is
 `UserEmail` and `Warehouse.Address.city` is `WarehouseAddressCity`. A field with
 no rules gets no alias.
 
-A name the file already re-exports gets a trailing underscore instead: the enum
-typing `Product.status` is itself named `ProductStatus`, so the alias is
-`ProductStatus_` and the class keeps the name protoc-gen-python gave it.
+A name a class in the same file already holds gets a trailing underscore
+instead: the enum typing `Product.status` is itself named `ProductStatus`, and
+the alias has to import it, so the alias is `ProductStatus_` and the class keeps
+the name protoc-gen-python gave it.
 
 A type from another file is reached through a module alias built from the whole
 proto path — `shop/common/v1/common.proto` is `_shop_common_v1_common_pb2`. The
@@ -41,17 +92,15 @@ first.
 
 | TypeScript | Python |
 |---|---|
-| The rule becomes the type: `Uuid`, `NonEmptyList<...>`, `Exclude<...>` | The type stays what protoc-gen-pyi declared (`str`, `Sequence[str]`, `Mapping[str, str]`), and the rule is one metadata string next to it |
+| The rule becomes the type: `Uuid`, `NonEmptyList<...>`, `Exclude<...>` | The type stays what protoc-gen-pyi declared (`str`, `Sequence[str]`, `Mapping[str, str]`), and the rule is one metadata entry next to it |
 | `required` lifts the field into `Require<..., "f">` | `"required"`, the first metadata entry; the field is declared exactly as before |
 | A message-typed field becomes `MoneyStrict` | It stays the plain class, `_shop_common_v1_common_pb2.Money`; there is no strict class to point at |
-| A rule with no type equivalent goes to the JSDoc, under "Left to runtime validation" | There is no such list, and no "Carried into the type" line either: carried and not carried read alike, because nothing is carried |
+| A rule with no type equivalent goes to the JSDoc, under "Left to runtime validation" | There is no such list: a constructor is what "carried" looks like here, and a string is what "left to runtime" looks like |
 | `(buf.validate.oneof).required` removes the `{ case: undefined }` arm | A comment above the message's aliases: `# required oneof key: exactly one of id, sku` |
 | A message-level CEL rule narrows the fields on its path, or is reported | Always a comment above the message's aliases, with the expression, its message and the idents and functions the parse found |
 
-Which makes [what TypeScript deliberately does not carry](rule-coverage-typescript.md#what-is-deliberately-not-carried)
-a TypeScript-only list. In Python all of it is printed verbatim — `ignore`, the
-rules under `repeated.items` and `map.keys` / `map.values`, and the exact bound
-of every partial rule:
+So [what TypeScript deliberately does not carry](rule-coverage-typescript.md#what-is-deliberately-not-carried)
+is still named here, verbatim, alongside the constructors that are:
 
 ```python
 PresenceRuleCoverageNeverChecked = Annotated[
@@ -63,16 +112,16 @@ ProductTags = Annotated[
     "repeated.items.string.max_len = 40",
     "repeated.items.string.min_len = 1",
     "repeated.items.string.pattern = ^[a-z0-9-]+$",
-    "repeated.max_items = 20",
+    MaxLen(20),
     "repeated.unique = true",
 ]
 ```
 
-None of it is enforced. `Annotated` metadata is inert, a type checker reads
-`UserEmail` as `str`, and protovalidate keeps doing the validating at runtime.
-What the overlay buys is the call site — `def promote(user_id: UserId)` instead
-of `user_id: str` — and the diff: a rule that stops being carried shows up in
-`make generate` instead of vanishing quietly.
+A type checker still reads `UserEmail` as `str`: `Annotated` metadata changes no
+static type, and protovalidate stays the authority at runtime. What the overlay
+buys is the enforcement any annotated_types reader applies, the call site — `def
+promote(user_id: UserId)` instead of `user_id: str` — and the diff: a rule that
+stops being carried shows up in `make generate` instead of vanishing quietly.
 
 ## OpenAPI
 

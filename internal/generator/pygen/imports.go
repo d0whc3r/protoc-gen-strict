@@ -19,14 +19,16 @@ var pyScalars = map[string]string{
 }
 
 // pyImports resolves proto type references to Python names and records the
-// import each needs. Symbols from this file are imported by name so they are
-// re-exported; the rest go through a module alias, as protoc-gen-pyi does.
+// import each needs. A type this file declares is imported by name; the rest go
+// through a module alias, as protoc-gen-pyi does.
 type pyImports struct {
 	self    string
-	symbols map[string]bool   // top-level names taken from the sibling _pb2 module
+	symbols map[string]bool   // names an alias references, from the sibling _pb2 module
 	modules map[string]string // proto path -> module alias
 	typing  map[string]bool   // names from typing
 	abc     map[string]bool   // names from collections.abc
+
+	annotated map[string]bool // constructors from annotated_types
 }
 
 func newPyImports(self string) *pyImports {
@@ -36,6 +38,8 @@ func newPyImports(self string) *pyImports {
 		modules: map[string]string{},
 		typing:  map[string]bool{},
 		abc:     map[string]bool{},
+
+		annotated: map[string]bool{},
 	}
 }
 
@@ -73,39 +77,52 @@ func (p *pyImports) base(protoType string, ref parser.TypeRef) string {
 	return "Any"
 }
 
+// lines renders the import block: PEP 8's three groups — standard library,
+// third party, generated modules — blank-separated, with the empty ones left
+// out.
 func (p *pyImports) lines() []string {
-	var out []string
+	var stdlib []string
 	if len(p.abc) > 0 {
-		out = append(out, "from collections.abc import "+strings.Join(slices.Sorted(maps.Keys(p.abc)), ", "))
+		stdlib = append(stdlib, "from collections.abc import "+strings.Join(slices.Sorted(maps.Keys(p.abc)), ", "))
 	}
 	if len(p.typing) > 0 {
-		out = append(out, "from typing import "+strings.Join(slices.Sorted(maps.Keys(p.typing)), ", "))
-	}
-	if len(out) > 0 {
-		out = append(out, "")
+		stdlib = append(stdlib, "from typing import "+strings.Join(slices.Sorted(maps.Keys(p.typing)), ", "))
 	}
 
+	var thirdParty []string
+	if len(p.annotated) > 0 {
+		thirdParty = append(thirdParty, "from "+annotatedTypesModule+" import "+strings.Join(slices.Sorted(maps.Keys(p.annotated)), ", "))
+	}
+
+	var generated []string
 	for _, file := range slices.Sorted(maps.Keys(p.modules)) {
 		module, alias := pyModule(file), p.modules[file]
 		// A proto at the import root is a top-level module with no package to
 		// import it from: "user.proto" is "user_pb2".
 		dot := strings.LastIndex(module, ".")
 		if dot < 0 {
-			out = append(out, "import "+module+" as "+alias)
+			generated = append(generated, "import "+module+" as "+alias)
 			continue
 		}
-		out = append(out, "from "+module[:dot]+" import "+module[dot+1:]+" as "+alias)
+		generated = append(generated, "from "+module[:dot]+" import "+module[dot+1:]+" as "+alias)
+	}
+	// Only the types an alias names. The overlay does not re-export the message
+	// classes: they stay in the module protoc-gen-python wrote them in, and a
+	// blanket re-export would import every message in the file to be read by
+	// nothing.
+	if names := slices.Sorted(maps.Keys(p.symbols)); len(names) > 0 {
+		generated = append(generated, "from "+pyModule(p.self)+" import "+strings.Join(names, ", "))
 	}
 
-	names := slices.Sorted(maps.Keys(p.symbols))
-	if len(names) > 0 {
-		// `X as X` marks a deliberate re-export, which type checkers require
-		// before a caller may import it from here.
-		out = append(out, "from "+pyModule(p.self)+" import (")
-		for _, name := range names {
-			out = append(out, "    "+name+" as "+name+",")
+	var out []string
+	for _, group := range [][]string{stdlib, thirdParty, generated} {
+		if len(group) == 0 {
+			continue
 		}
-		out = append(out, ")")
+		if len(out) > 0 {
+			out = append(out, "")
+		}
+		out = append(out, group...)
 	}
 	return out
 }

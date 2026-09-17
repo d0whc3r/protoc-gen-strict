@@ -2,8 +2,13 @@
 # source: shop/common/v1/common.proto
 """buf.validate rules for shop/common/v1/common.proto.
 
-Types come from shop.common.v1.common_pb2 and are re-exported here, so one
-import gives a caller both the message class and its annotated field types.
+One typing.Annotated alias per constrained field, over the type
+protoc-gen-python already declared. The message classes stay in
+shop.common.v1.common_pb2; import them from there.
+
+A rule with an annotated_types equivalent is carried as that constructor,
+which pydantic, msgspec and beartype enforce. The rest are metadata strings,
+left to protovalidate at runtime.
 """
 
 from __future__ import annotations
@@ -11,14 +16,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated
 
+from annotated_types import Ge, Gt, Le, MaxLen, MinLen
+
 from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
-from shop.common.v1.common_pb2 import (
-    Currency as Currency,
-    LabelSet as LabelSet,
-    Money as Money,
-    Pagination as Pagination,
-    TimeRange as TimeRange,
-)
+from shop.common.v1.common_pb2 import Currency
 
 # Money is a fixed-point amount, split into whole units and nanos the way google.type.Money does.
 # cel[money.consistent_sign]: this.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)
@@ -27,13 +28,13 @@ from shop.common.v1.common_pb2 import (
 #   calls: _==_, _>_, _||_
 MoneyUnits = Annotated[
     int,
-    "int64.gte = -1000000000",
-    "int64.lte = 1000000000",
+    Ge(-1000000000),
+    Le(1000000000),
 ]
 MoneyNanos = Annotated[
     int,
-    "int32.gte = -999999999",
-    "int32.lte = 999999999",
+    Ge(-999999999),
+    Le(999999999),
 ]
 MoneyCurrency = Annotated[
     Currency,
@@ -45,17 +46,17 @@ MoneyCurrency = Annotated[
 # Pagination is the page selector shared by every list request.
 PaginationPage = Annotated[
     int,
-    "int32.gte = 1",
+    Ge(1),
 ]
 PaginationPageSize = Annotated[
     int,
-    "int32.gt = 0",
-    "int32.lte = 100",
+    Gt(0),
+    Le(100),
 ]
 PaginationPageToken = Annotated[
     str,
-    "string.max_len = 512",
-    "string.min_len = 8",
+    MaxLen(512),
+    MinLen(8),
 ]
 
 # TimeRange is a half-open interval [start, end).
@@ -74,8 +75,8 @@ LabelSetLabels = Annotated[
     "map.keys.string.max_len = 63",
     "map.keys.string.min_len = 1",
     "map.keys.string.pattern = ^[a-z][a-z0-9_-]*$",
-    "map.max_pairs = 32",
-    "map.min_pairs = 1",
+    MaxLen(32),
+    MinLen(1),
     "map.values.string.max_len = 255",
 ]
 

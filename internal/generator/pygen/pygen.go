@@ -5,7 +5,6 @@ package pygen
 
 import (
 	"maps"
-	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
@@ -14,11 +13,11 @@ import (
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
 
-// pyAlias is one `Name = Annotated[T, "rule", ...]` binding.
+// pyAlias is one `Name = Annotated[T, MinLen(3), "rule", ...]` binding.
 type pyAlias struct {
-	name  string
-	typ   string
-	rules []string
+	name     string
+	typ      string
+	metadata []string // rendered Annotated entries: a constructor call, or a quoted rule
 }
 
 // WriteFile writes a <prefix>_strict.py overlay on protoc-gen-python output.
@@ -26,8 +25,7 @@ type pyAlias struct {
 // Python cannot narrow a type: message classes come from a metaclass and carry
 // no structural type to intersect with. It can name each constrained field, so
 // the rules show at the call site: `def promote(user_id: UserId)` instead of
-// `user_id: str`. The classes are re-exported, so one import covers
-// both.
+// `user_id: str`.
 func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.MessageMetadata) {
 	pkgPrefix := string(file.Desc.Package()) + "."
 	imports := newPyImports(file.Desc.Path())
@@ -41,27 +39,26 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 	for _, msg := range messages {
 		relative := strings.TrimPrefix(msg.Name, pkgPrefix)
 		owner := strings.ReplaceAll(relative, ".", "")
-		imports.symbols[topLevel(relative)] = true
 
 		b := block{doc: pyMessageDoc(msg)}
 		for _, field := range msg.Fields {
-			rules := emit.RuleComments(field)
-			if len(rules) == 0 {
+			metadata := imports.metadataOf(field)
+			if len(metadata) == 0 {
 				continue
 			}
 			b.aliases = append(b.aliases, pyAlias{
-				name:  owner + emit.Pascal(field.Name),
-				typ:   imports.typeOf(field),
-				rules: rules,
+				name:     owner + emit.Pascal(field.Name),
+				typ:      imports.typeOf(field),
+				metadata: metadata,
 			})
 		}
 		blocks = append(blocks, b)
 	}
 
-	// An alias and a re-exported class can want one name: `User.id` yields
-	// `UserId`, and a sibling `message UserId` is imported under it. The alias
-	// is the one renamed, since the class name is protoc-gen-python's. Resolved
-	// after the walk, once every re-exported name is known.
+	// An alias and an imported class can want one name: a `UserId id` field
+	// yields the alias `UserId`, and its own type is imported under that name.
+	// The alias is the one renamed, since the class name is
+	// protoc-gen-python's. Resolved after the walk, once every import is known.
 	taken := maps.Clone(imports.symbols)
 	for i := range blocks {
 		for j := range blocks[i].aliases {
@@ -74,8 +71,13 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 	g.P("# source: ", file.Desc.Path())
 	g.P(`"""buf.validate rules for `, file.Desc.Path(), `.`)
 	g.P()
-	g.P("Types come from ", pyModule(file.Desc.Path()), " and are re-exported here, so one")
-	g.P("import gives a caller both the message class and its annotated field types.")
+	g.P("One typing.Annotated alias per constrained field, over the type")
+	g.P("protoc-gen-python already declared. The message classes stay in")
+	g.P(pyModule(file.Desc.Path()), "; import them from there.")
+	g.P()
+	g.P("A rule with an ", annotatedTypesModule, " equivalent is carried as that constructor,")
+	g.P("which pydantic, msgspec and beartype enforce. The rest are metadata strings,")
+	g.P("left to protovalidate at runtime.")
 	g.P(`"""`)
 	g.P()
 	g.P("from __future__ import annotations")
@@ -98,8 +100,8 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 		for _, alias := range b.aliases {
 			g.P(alias.name, " = Annotated[")
 			g.P("    ", alias.typ, ",")
-			for _, rule := range alias.rules {
-				g.P("    ", strconv.Quote(rule), ",")
+			for _, entry := range alias.metadata {
+				g.P("    ", entry, ",")
 			}
 			g.P("]")
 		}
@@ -109,7 +111,7 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 
 // uniqueName returns name with as many trailing underscores as it takes to be
 // free — PEP 8's escape for a name something else already holds — and records
-// the result.
+// the result. The import keeps the name protoc-gen-python gave it.
 func uniqueName(taken map[string]bool, name string) string {
 	unique := name
 	for taken[unique] {
