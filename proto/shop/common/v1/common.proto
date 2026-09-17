@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+// Package shop.common.v1 holds the types shared by the other demo packages:
+// money, pagination and time ranges. It exercises enums, cross-field CEL rules
+// and map rules.
+package shop.common.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Currency is the ISO-4217 subset this demo API accepts.
+enum Currency {
+  // Unset currency.
+  CURRENCY_UNSPECIFIED = 0;
+  // Euro.
+  CURRENCY_EUR = 1;
+  // US dollar.
+  CURRENCY_USD = 2;
+  // Pound sterling.
+  CURRENCY_GBP = 3;
+}
+
+// SortDirection orders a list response.
+enum SortDirection {
+  // Unset direction; the server picks ascending.
+  SORT_DIRECTION_UNSPECIFIED = 0;
+  // Smallest first.
+  SORT_DIRECTION_ASC = 1;
+  // Largest first.
+  SORT_DIRECTION_DESC = 2;
+}
+
+// Money is a fixed-point amount, split into whole units and nanos the way
+// google.type.Money does.
+message Money {
+  // Cross-field rule: units and nanos must not disagree on sign.
+  option (buf.validate.message).cel = {
+    id: "money.consistent_sign"
+    message: "units and nanos must have the same sign"
+    expression: "this.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)"
+  };
+
+  // Whole currency units, e.g. 12 for 12.50 EUR.
+  int64 units = 1 [(buf.validate.field).int64 = {
+    gte: -1000000000
+    lte: 1000000000
+  }];
+  // Fractional part in nanos, e.g. 500000000 for 12.50 EUR.
+  int32 nanos = 2 [(buf.validate.field).int32 = {
+    gte: -999999999
+    lte: 999999999
+  }];
+  // The currency of the amount.
+  Currency currency = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }
+  ];
+}
+
+// Pagination is the page selector shared by every list request.
+message Pagination {
+  // 1-based page number.
+  int32 page = 1 [(buf.validate.field).int32.gte = 1];
+  // Number of items per page.
+  int32 page_size = 2 [(buf.validate.field).int32 = {
+    gt: 0
+    lte: 100
+  }];
+  // Opaque cursor returned by a previous response. Mutually exclusive with page.
+  optional string page_token = 3 [(buf.validate.field).string = {
+    min_len: 8
+    max_len: 512
+  }];
+}
+
+// TimeRange is a half-open interval [start, end).
+message TimeRange {
+  // Cross-field rule spanning two message-typed fields.
+  option (buf.validate.message).cel = {
+    id: "time_range.ordered"
+    message: "end must be strictly after start"
+    expression: "!has(this.end) || this.start < this.end"
+  };
+
+  // Inclusive lower bound.
+  google.protobuf.Timestamp start = 1 [(buf.validate.field).required = true];
+  // Exclusive upper bound. Absent means "open ended".
+  optional google.protobuf.Timestamp end = 2;
+}
+
+// LabelSet is a bounded set of user-supplied key/value labels.
+message LabelSet {
+  // Keys and values are constrained independently by the map rules.
+  map<string, string> labels = 1 [(buf.validate.field).map = {
+    min_pairs: 1
+    max_pairs: 32
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 63
+        pattern: "^[a-z][a-z0-9_-]*$"
+      }
+    }
+    values: {
+      string: {max_len: 255}
+    }
+  }];
+}

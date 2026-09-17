@@ -1,0 +1,388 @@
+syntax = "proto3";
+
+// Package shop.coverage.v1 is not a realistic API. It exists to hit every
+// protovalidate rule family and every proto type the generators must handle,
+// so a regression in the rule walk shows up in the golden files.
+package shop.coverage.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// Flavor exercises the enum rule family.
+enum Flavor {
+  // Unset flavor.
+  FLAVOR_UNSPECIFIED = 0;
+  // Sweet.
+  FLAVOR_SWEET = 1;
+  // Salty.
+  FLAVOR_SALTY = 2;
+  // Sour.
+  FLAVOR_SOUR = 3;
+  // Bitter.
+  FLAVOR_BITTER = 4;
+}
+
+// StringRuleCoverage exercises the string rule family, including the
+// well-known format rules that live in a oneof inside StringRules.
+message StringRuleCoverage {
+  // Exact character length.
+  string exact_len = 1 [(buf.validate.field).string.len = 10];
+  // Character length bounds.
+  string len_bounds = 2 [(buf.validate.field).string = {
+    min_len: 2
+    max_len: 64
+  }];
+  // Byte length bounds, which differ from character length for non-ASCII.
+  string byte_bounds = 3 [(buf.validate.field).string = {
+    min_bytes: 2
+    max_bytes: 128
+  }];
+  // Must match a regular expression.
+  string pattern = 4 [(buf.validate.field).string.pattern = "^[a-z]+(_[a-z]+)*$"];
+  // Substring rules.
+  string affixes = 5 [(buf.validate.field).string = {
+    prefix: "id_"
+    suffix: "_v1"
+    contains: "-"
+    not_contains: " "
+  }];
+  // Membership rules.
+  string enumerated = 6 [(buf.validate.field).string = {
+    in: [
+      "alpha",
+      "beta",
+      "stable"
+    ]
+    not_in: ["deprecated"]
+  }];
+  // Fixed value.
+  string constant = 7 [(buf.validate.field).string.const = "fixed"];
+  // Well-known format: email address.
+  string email = 8 [(buf.validate.field).string.email = true];
+  // Well-known format: hostname.
+  string hostname = 9 [(buf.validate.field).string.hostname = true];
+  // Well-known format: URI.
+  string uri = 10 [(buf.validate.field).string.uri = true];
+  // Well-known format: relative URI reference.
+  string uri_ref = 11 [(buf.validate.field).string.uri_ref = true];
+  // Well-known format: UUID.
+  string uuid = 12 [(buf.validate.field).string.uuid = true];
+  // Well-known format: trimmed UUID (no dashes).
+  string tuuid = 13 [(buf.validate.field).string.tuuid = true];
+  // Well-known format: IPv4 address.
+  string ipv4 = 14 [(buf.validate.field).string.ipv4 = true];
+  // Well-known format: IPv6 address.
+  string ipv6 = 15 [(buf.validate.field).string.ipv6 = true];
+  // Well-known format: IP address of either version.
+  string ip = 16 [(buf.validate.field).string.ip = true];
+  // Well-known format: CIDR prefix.
+  string ip_prefix = 17 [(buf.validate.field).string.ip_prefix = true];
+  // Well-known format: host:port pair.
+  string host_and_port = 18 [(buf.validate.field).string.host_and_port = true];
+  // Well-known format: HTTP header name, matched strictly.
+  string header_name = 19 [(buf.validate.field).string.well_known_regex = KNOWN_REGEX_HTTP_HEADER_NAME];
+}
+
+// NumericRuleCoverage exercises every numeric rule family. protovalidate
+// declares a separate rule message per wire type, so each one is walked
+// separately by the parser.
+message NumericRuleCoverage {
+  // Signed 32-bit, exclusive bounds.
+  int32 i32 = 1 [(buf.validate.field).int32 = {
+    gt: 0
+    lt: 1000
+  }];
+  // Signed 64-bit, inclusive bounds.
+  int64 i64 = 2 [(buf.validate.field).int64 = {
+    gte: -9000
+    lte: 9000
+  }];
+  // Unsigned 32-bit.
+  uint32 u32 = 3 [(buf.validate.field).uint32.lte = 65535];
+  // Unsigned 64-bit.
+  uint64 u64 = 4 [(buf.validate.field).uint64.gte = 1];
+  // Zigzag-encoded signed 32-bit.
+  sint32 s32 = 5 [(buf.validate.field).sint32.gte = -128];
+  // Zigzag-encoded signed 64-bit.
+  sint64 s64 = 6 [(buf.validate.field).sint64.lte = 1024];
+  // Fixed-width unsigned 32-bit.
+  fixed32 f32 = 7 [(buf.validate.field).fixed32.gt = 0];
+  // Fixed-width unsigned 64-bit.
+  fixed64 f64 = 8 [(buf.validate.field).fixed64.gt = 0];
+  // Fixed-width signed 32-bit.
+  sfixed32 sf32 = 9 [(buf.validate.field).sfixed32.lt = 0];
+  // Fixed-width signed 64-bit.
+  sfixed64 sf64 = 10 [(buf.validate.field).sfixed64.lt = 0];
+  // Single-precision float, rejecting NaN and infinities.
+  float ratio = 11 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+    finite: true
+  }];
+  // Double-precision float with a membership rule.
+  double factor = 12 [(buf.validate.field).double = {
+    in: [
+      0.5,
+      1,
+      2
+    ]
+  }];
+  // Fixed value.
+  int32 constant = 13 [(buf.validate.field).int32.const = 42];
+  // Excluded values.
+  int32 excluded = 14 [(buf.validate.field).int32 = {
+    not_in: [
+      -1,
+      0
+    ]
+  }];
+}
+
+// ScalarRuleCoverage exercises the remaining scalar families.
+message ScalarRuleCoverage {
+  // Must be explicitly true.
+  bool accepted = 1 [(buf.validate.field).bool.const = true];
+  // Length-bounded opaque bytes.
+  bytes payload = 2 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 4096
+  }];
+  // Fixed-length bytes with a prefix rule.
+  bytes signature = 3 [(buf.validate.field).bytes = {
+    len: 32
+    prefix: "\x01\x02"
+  }];
+  // Bytes constrained to a well-known format.
+  bytes remote_ip = 4 [(buf.validate.field).bytes.ip = true];
+  // Enum restricted to declared values.
+  Flavor defined = 5 [(buf.validate.field).enum.defined_only = true];
+  // Enum restricted to a subset.
+  Flavor subset = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    in: [
+      1,
+      2
+    ]
+  }];
+  // Enum pinned to one value.
+  Flavor pinned = 7 [(buf.validate.field).enum.const = 3];
+}
+
+// WellKnownRuleCoverage exercises well-known types and their rule families.
+message WellKnownRuleCoverage {
+  // Bounded duration.
+  google.protobuf.Duration timeout = 1 [(buf.validate.field).duration = {
+    gte: {seconds: 1}
+    lte: {seconds: 300}
+  }];
+  // Duration restricted to a set of values.
+  google.protobuf.Duration interval = 2 [(buf.validate.field).duration = {
+    in: [
+      {seconds: 60},
+      {seconds: 300},
+      {seconds: 900}
+    ]
+  }];
+  // Timestamp that must be in the past.
+  google.protobuf.Timestamp seen_at = 3 [(buf.validate.field).timestamp.lt_now = true];
+  // Timestamp that must be in the future.
+  google.protobuf.Timestamp expires_at = 4 [(buf.validate.field).timestamp.gt_now = true];
+  // Timestamp within a sliding window around now.
+  google.protobuf.Timestamp recent = 5 [(buf.validate.field).timestamp.within = {seconds: 86400}];
+  // Timestamp with an absolute lower bound.
+  google.protobuf.Timestamp after_epoch = 6 [(buf.validate.field).timestamp.gte = {seconds: 0}];
+  // Any restricted to a set of type URLs.
+  google.protobuf.Any detail = 7 [(buf.validate.field).any = {in: ["type.googleapis.com/google.protobuf.Duration"]}];
+  // Unconstrained well-known types the generators still have to map.
+  google.protobuf.Struct metadata = 8;
+  // A field mask selecting which fields to write.
+  google.protobuf.FieldMask update_mask = 9;
+}
+
+// CollectionRuleCoverage exercises repeated and map rules, including rules
+// applied to the elements rather than the collection.
+message CollectionRuleCoverage {
+  // Bounded, deduplicated list of scalars.
+  repeated string names = 1 [
+    (buf.validate.field).repeated = {
+      min_items: 1
+      max_items: 10
+      unique: true
+    },
+    (buf.validate.field).repeated.items.string.min_len = 1
+  ];
+  // List whose elements are themselves constrained enums.
+  repeated Flavor flavors = 2 [(buf.validate.field).repeated.items.enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // List of messages; element rules cannot reach inside a message, so the
+  // nested message carries its own rules.
+  repeated StringRuleCoverage nested = 3 [(buf.validate.field).repeated.max_items = 4];
+  // Map with rules on keys, values and size.
+  map<string, int32> counters = 4 [(buf.validate.field).map = {
+    min_pairs: 1
+    max_pairs: 50
+    keys: {
+      string: {
+        min_len: 1
+        pattern: "^[a-z_]+$"
+      }
+    }
+    values: {
+      int32: {gte: 0}
+    }
+  }];
+  // Map whose values are messages.
+  map<string, NumericRuleCoverage> readings = 5 [(buf.validate.field).map.max_pairs = 8];
+}
+
+// PresenceRuleCoverage exercises required, optional and the ignore modes that
+// decide when the other rules are evaluated at all.
+message PresenceRuleCoverage {
+  // Must be set and non-empty.
+  string required_value = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+  // Explicit proto3 optional with rules that apply only when present.
+  optional string optional_value = 2 [(buf.validate.field).string.min_len = 3];
+  // Rules are skipped when the field holds its zero value.
+  string skip_when_empty = 3 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string.uuid = true
+  ];
+  // Validation is switched off entirely for this field. protovalidate rejects
+  // combining IGNORE_ALWAYS with other rules, so this carries nothing else.
+  string never_checked = 4 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+  // A required message field.
+  StringRuleCoverage required_message = 5 [(buf.validate.field).required = true];
+}
+
+// CelRuleCoverage exercises the CEL paths: several rules on one field, the
+// shorthand form, and message-level rules that span fields.
+message CelRuleCoverage {
+  // Two fields of the same message compared against each other.
+  option (buf.validate.message).cel = {
+    id: "cel_coverage.window_ordered"
+    message: "window_end must be after window_start"
+    expression: "this.window_end > this.window_start"
+  };
+  // A message-level rule using a macro over a repeated field.
+  option (buf.validate.message).cel = {
+    id: "cel_coverage.slugs_lowercase"
+    message: "every slug must be lowercase"
+    expression: "this.slugs.all(s, s == s.lowerAscii())"
+  };
+  // The shorthand message-level form, where the id is the expression itself.
+  option (buf.validate.message).cel_expression = "this.window_start >= 0";
+
+  // Two independent CEL rules on a single field.
+  string identifier = 1 [
+    (buf.validate.field).cel = {
+      id: "cel_coverage.identifier.prefix"
+      message: "identifier must start with 'itm_'"
+      expression: "this.startsWith('itm_')"
+    },
+    (buf.validate.field).cel = {
+      id: "cel_coverage.identifier.length"
+      message: "identifier must be 4 to 40 characters"
+      expression: "this.size() >= 4 && this.size() <= 40"
+    }
+  ];
+  // The shorthand field form.
+  int32 window_start = 2 [(buf.validate.field).cel_expression = "this % 15 == 0"];
+  // A field with both a standard rule and a CEL rule.
+  int32 window_end = 3 [
+    (buf.validate.field).int32.lte = 1440,
+    (buf.validate.field).cel = {
+      id: "cel_coverage.window_end.quarter_hour"
+      message: "window_end must fall on a quarter hour"
+      expression: "this % 15 == 0"
+    }
+  ];
+  // A CEL rule using a macro over the field's own list value.
+  repeated string slugs = 4 [(buf.validate.field).cel = {
+    id: "cel_coverage.slugs.non_empty"
+    message: "slugs must not contain empty entries"
+    expression: "this.all(s, s.size() > 0)"
+  }];
+  // A CEL rule reading a nested field through a select expression.
+  StringRuleCoverage nested = 5 [(buf.validate.field).cel = {
+    id: "cel_coverage.nested.uuid_set"
+    message: "nested.uuid must be set"
+    expression: "this.uuid != ''"
+  }];
+}
+
+// CelNarrowingCoverage exercises the CEL shapes that become part of the
+// generated type rather than being left to runtime validation.
+message CelNarrowingCoverage {
+  // Every shape the translation recognises, in one conjunction.
+  option (buf.validate.message).cel = {
+    id: "cel_narrowing.shapes"
+    message: "label must be set, slug must be empty, flavor must be unset, note must be absent and detail must be present"
+    expression: "this.label != '' && this.slug == '' && this.flavor == 0 && !has(this.note) && has(this.detail)"
+  };
+  // A conjunct reaching through a message-typed field.
+  option (buf.validate.message).cel = {
+    id: "cel_narrowing.nested"
+    message: "detail.uuid must be set"
+    expression: "this.detail.uuid != ''"
+  };
+  // Conjuncts reaching through a message-typed field onto the two shapes the
+  // nested narrowing renders differently from the top level: a presence test,
+  // which moves the field into the nested Require, and an enum zero.
+  option (buf.validate.message).cel = {
+    id: "cel_narrowing.nested_shapes"
+    message: "inner.stamp must be set and inner.flavor must be unset"
+    expression: "has(this.inner.stamp) && this.inner.flavor == 0"
+  };
+  // A conjunct reaching through google.protobuf.FieldMask, a message whose file
+  // this plugin is never asked to generate. The path resolves against the
+  // descriptors, but there is no overlay to narrow, so the conjunct has to be
+  // reported rather than placed.
+  option (buf.validate.message).cel = {
+    id: "cel_narrowing.foreign"
+    message: "inner.mask must name at least one path"
+    expression: "has(this.inner.mask.paths)"
+  };
+
+  // Inner holds the fields the nested-shape rule reaches into: a message
+  // field, which tracks presence, and an enum.
+  message Inner {
+    // Constrained to be present by the message rule above.
+    google.protobuf.Timestamp stamp = 1;
+    // Constrained to its zero member by the message rule above.
+    Flavor flavor = 2;
+    // Reached through by the foreign-path rule above.
+    google.protobuf.FieldMask mask = 3;
+  }
+
+  // Constrained to be non-empty by the message rule above.
+  string label = 1;
+  // Constrained to be empty by the message rule above.
+  string slug = 2;
+  // Constrained to its zero member by the message rule above.
+  Flavor flavor = 3;
+  // Constrained to be absent by the message rule above.
+  optional string note = 4;
+  // Constrained to be present, and narrowed through, by the rules above.
+  StringRuleCoverage detail = 5;
+  // Narrowed through by the nested-shape rule above.
+  Inner inner = 6;
+}
+
+// CoverageService exists for the two RPC shapes the overlay has to resolve.
+service CoverageService {
+  // Takes a message this run narrows, so the overlay retypes its schema.
+  rpc Check(StringRuleCoverage) returns (google.protobuf.Empty);
+  // Takes and returns a well-known type: nothing narrows it, and no sibling
+  // module exports it — protobuf-es ships it in @bufbuild/protobuf/wkt.
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

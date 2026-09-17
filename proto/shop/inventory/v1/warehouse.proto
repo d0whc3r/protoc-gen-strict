@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+// Package shop.inventory.v1 stresses the structural corners: real oneofs,
+// message-level oneof rules, nested messages, repeated messages, maps of
+// messages, and the duration/timestamp rule families.
+package shop.inventory.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "shop/common/v1/common.proto";
+
+// StockMovementKind classifies a change in stock level.
+enum StockMovementKind {
+  // Unset kind.
+  STOCK_MOVEMENT_KIND_UNSPECIFIED = 0;
+  // Goods arriving from a supplier.
+  STOCK_MOVEMENT_KIND_INBOUND = 1;
+  // Goods leaving for a customer.
+  STOCK_MOVEMENT_KIND_OUTBOUND = 2;
+  // Manual correction after a physical count.
+  STOCK_MOVEMENT_KIND_ADJUSTMENT = 3;
+}
+
+// Warehouse is a physical stocking location.
+message Warehouse {
+  // Address is nested to check that nested messages are walked.
+  message Address {
+    // Street and number.
+    string line1 = 1 [(buf.validate.field).string.min_len = 1];
+    // Apartment, floor, etc.
+    optional string line2 = 2 [(buf.validate.field).string.max_len = 120];
+    // City name.
+    string city = 3 [(buf.validate.field).string.min_len = 1];
+    // ISO 3166-1 alpha-2 country code.
+    string country_code = 4 [(buf.validate.field).string = {
+      len: 2
+      pattern: "^[A-Z]{2}$"
+    }];
+    // Postal code, format varies by country.
+    string postal_code = 5 [(buf.validate.field).string = {
+      min_len: 3
+      max_len: 12
+    }];
+  }
+
+  // Server-assigned identifier.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // Human readable name.
+  string name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 120
+  }];
+  // Physical location.
+  Address address = 3 [(buf.validate.field).required = true];
+  // How long goods may sit before an alert is raised.
+  google.protobuf.Duration max_dwell_time = 4 [(buf.validate.field).duration = {
+    gte: {seconds: 3600}
+    lte: {seconds: 2592000}
+  }];
+  // Operating hours keyed by lowercase weekday name.
+  map<string, OpeningHours> opening_hours = 5 [(buf.validate.field).map = {
+    max_pairs: 7
+    keys: {
+      string: {
+        in: [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ]
+      }
+    }
+  }];
+  // Contact points for this warehouse, at least one is required.
+  repeated ContactPoint contacts = 6 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// OpeningHours is a daily window expressed in minutes past midnight.
+message OpeningHours {
+  // The window must be non-empty and within a single day.
+  option (buf.validate.message).cel = {
+    id: "opening_hours.ordered"
+    message: "closes_at_minute must be after opens_at_minute"
+    expression: "this.closes_at_minute > this.opens_at_minute"
+  };
+
+  // Opening time, minutes past midnight.
+  uint32 opens_at_minute = 1 [(buf.validate.field).uint32.lte = 1439];
+  // Closing time, minutes past midnight.
+  uint32 closes_at_minute = 2 [(buf.validate.field).uint32.lte = 1440];
+}
+
+// ContactPoint reaches a person by exactly one channel.
+message ContactPoint {
+  // Display name of the contact.
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  // The single channel to reach this contact on.
+  oneof channel {
+    option (buf.validate.oneof).required = true;
+    // Email address.
+    string email = 2 [(buf.validate.field).string.email = true];
+    // E.164 phone number.
+    string phone = 3 [(buf.validate.field).string.pattern = "^\\+[1-9][0-9]{7,14}$"];
+    // Internal extension number.
+    uint32 extension = 4 [(buf.validate.field).uint32 = {
+      gte: 100
+      lte: 9999
+    }];
+  }
+}
+
+// StockMovement records one change to the stock level of a product.
+message StockMovement {
+  // An outbound movement must reduce stock, an inbound one must increase it.
+  option (buf.validate.message).cel = {
+    id: "stock_movement.quantity_sign"
+    message: "outbound movements require a negative quantity, inbound a positive one"
+    expression: "(this.kind == 2 && this.quantity_delta < 0) || (this.kind == 1 && this.quantity_delta > 0) || this.kind == 3"
+  };
+
+  // Server-assigned identifier.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // The warehouse the movement happened in.
+  string warehouse_id = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+  // The product that moved.
+  string product_id = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+  // What kind of movement this is.
+  StockMovementKind kind = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Signed change in units.
+  sint32 quantity_delta = 5 [(buf.validate.field).sint32 = {
+    gte: -100000
+    lte: 100000
+  }];
+  // When the movement was recorded. Never in the future.
+  google.protobuf.Timestamp occurred_at = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).timestamp.lt_now = true
+  ];
+  // Cost of the goods that moved, for inbound movements.
+  optional common.v1.Money unit_cost = 7;
+  // Either a purchase order or a customer order backs the movement, never both.
+  option (buf.validate.message).oneof = {
+    fields: [
+      "purchase_order_id",
+      "customer_order_id"
+    ]
+  };
+  // Supplier purchase order reference.
+  string purchase_order_id = 8 [(buf.validate.field).string.max_len = 64];
+  // Customer order reference.
+  string customer_order_id = 9 [(buf.validate.field).string.max_len = 64];
+}
+
+// StockLevel is the current quantity of a product in a warehouse.
+message StockLevel {
+  // The product being counted.
+  string product_id = 1 [(buf.validate.field).string.uuid = true];
+  // Units physically present.
+  uint64 on_hand = 2 [(buf.validate.field).uint64.lte = 100000000];
+  // Units promised to orders but not yet shipped.
+  uint64 reserved = 3 [(buf.validate.field).uint64.lte = 100000000];
+  // Reserved stock can never exceed what is on hand.
+  option (buf.validate.message).cel = {
+    id: "stock_level.reserved_within_on_hand"
+    message: "reserved must not exceed on_hand"
+    expression: "this.reserved <= this.on_hand"
+  };
+  // When the level was last recounted, at most 90 days ago.
+  google.protobuf.Timestamp counted_at = 4 [(buf.validate.field).timestamp.within = {seconds: 7776000}];
+  // Shorthand CEL form: expression only, no id or message.
+  uint32 reorder_threshold = 5 [(buf.validate.field).cel_expression = "this <= 10000"];
+}

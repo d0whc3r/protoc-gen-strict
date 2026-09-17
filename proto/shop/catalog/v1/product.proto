@@ -1,0 +1,257 @@
+syntax = "proto3";
+
+// Package shop.catalog.v1 is a realistic CRUD resource: a resource message
+// with read-only fields, request/response pairs, a FieldMask update and a
+// service with HTTP annotations.
+package shop.catalog.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "shop/common/v1/common.proto";
+
+// ProductStatus is the lifecycle state of a product.
+enum ProductStatus {
+  // Unset status.
+  PRODUCT_STATUS_UNSPECIFIED = 0;
+  // Visible and purchasable.
+  PRODUCT_STATUS_ACTIVE = 1;
+  // Hidden from the storefront but still addressable by id.
+  PRODUCT_STATUS_ARCHIVED = 2;
+  // Saved but never published.
+  PRODUCT_STATUS_DRAFT = 3;
+}
+
+// Product is the catalog resource.
+message Product {
+  // A discount, when present, must be cheaper than the list price. Comparing
+  // two message-typed fields is only expressible at the message level.
+  option (buf.validate.message).cel = {
+    id: "product.discount_below_price"
+    message: "discount_price must be lower than price"
+    expression: "!has(this.discount_price) || this.discount_price.units < this.price.units"
+  };
+  // A draft product must not be given a publish timestamp.
+  option (buf.validate.message).cel = {
+    id: "product.draft_not_published"
+    message: "a draft product cannot have published_at set"
+    expression: "this.status != 3 || !has(this.published_at)"
+  };
+
+  // Server-assigned identifier.
+  string id = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).string.uuid = true
+  ];
+  // Stock keeping unit, uppercase alphanumeric with dashes.
+  string sku = 2 [(buf.validate.field).string = {
+    min_len: 3
+    max_len: 32
+    pattern: "^[A-Z0-9]+(-[A-Z0-9]+)*$"
+  }];
+  // Display name.
+  string name = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // Long form description.
+  optional string description = 4 [(buf.validate.field).string.max_len = 4096];
+  // List price.
+  common.v1.Money price = 5 [(buf.validate.field).required = true];
+  // Optional promotional price.
+  optional common.v1.Money discount_price = 6;
+  // Lifecycle state.
+  ProductStatus status = 7 [(buf.validate.field).enum.defined_only = true];
+  // Free-form tags, deduplicated by the server.
+  repeated string tags = 8 [
+    (buf.validate.field).repeated = {
+      max_items: 20
+      unique: true
+    },
+    (buf.validate.field).repeated.items.string = {
+      min_len: 1
+      max_len: 40
+      pattern: "^[a-z0-9-]+$"
+    }
+  ];
+  // Arbitrary labels attached to the product.
+  map<string, string> labels = 9 [(buf.validate.field).map.max_pairs = 16];
+  // Email of the creator. Empty when the product was created by an automation.
+  string created_by_email = 10 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).cel = {
+      id: "product.created_by_email"
+      message: "if set, created_by_email must be a valid email address"
+      expression: "this.size() == 0 || this.isEmail()"
+    }
+  ];
+  // Creation time.
+  google.protobuf.Timestamp created_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Last modification time.
+  google.protobuf.Timestamp updated_at = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Publication time, absent while the product is a draft.
+  optional google.protobuf.Timestamp published_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Optimistic concurrency token, incremented on every write.
+  int64 version = 14 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).int64.gte = 0
+  ];
+
+  reserved 15, 16;
+  reserved "legacy_category";
+}
+
+// CreateProductRequest creates a new product.
+message CreateProductRequest {
+  // Server-assigned fields must be left empty by the caller.
+  option (buf.validate.message).cel = {
+    id: "create_product.no_read_only_fields"
+    message: "read-only fields (id, created_at, updated_at, version) must not be set"
+    expression: "this.product.id == '' && !has(this.product.created_at) && !has(this.product.updated_at) && this.product.version == 0"
+  };
+
+  // The product to create.
+  Product product = 1 [(buf.validate.field).required = true];
+  // Caller-supplied idempotency key; replays return the original result.
+  optional string idempotency_key = 2 [(buf.validate.field).string.uuid = true];
+}
+
+// CreateProductResponse returns the stored product.
+message CreateProductResponse {
+  // The created product, with server-assigned fields filled in.
+  Product product = 1;
+}
+
+// GetProductRequest looks a product up by id or by SKU.
+message GetProductRequest {
+  // Exactly one lookup key must be provided.
+  oneof key {
+    option (buf.validate.oneof).required = true;
+    // Look up by server-assigned id.
+    string id = 1 [(buf.validate.field).string.uuid = true];
+    // Look up by stock keeping unit.
+    string sku = 2 [(buf.validate.field).string.min_len = 3];
+  }
+}
+
+// GetProductResponse returns a single product.
+message GetProductResponse {
+  // The requested product.
+  Product product = 1;
+}
+
+// ListProductsRequest pages through the catalog.
+message ListProductsRequest {
+  // A price filter needs both bounds or neither.
+  option (buf.validate.message).cel = {
+    id: "list_products.price_bounds"
+    message: "min_price and max_price must be set together"
+    expression: "has(this.min_price) == has(this.max_price)"
+  };
+
+  // Page selector.
+  common.v1.Pagination pagination = 1 [(buf.validate.field).required = true];
+  // Only return products in these states. Empty means all states.
+  repeated ProductStatus statuses = 2 [(buf.validate.field).repeated.items.enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Case-insensitive substring matched against the product name.
+  optional string name_contains = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // Inclusive lower price bound.
+  optional common.v1.Money min_price = 4;
+  // Inclusive upper price bound.
+  optional common.v1.Money max_price = 5;
+  // Field to sort by.
+  string order_by = 6 [(buf.validate.field).string = {
+    in: [
+      "",
+      "name",
+      "sku",
+      "created_at",
+      "price"
+    ]
+  }];
+  // Sort direction.
+  common.v1.SortDirection order_direction = 7 [(buf.validate.field).enum.defined_only = true];
+}
+
+// ListProductsResponse is one page of products.
+message ListProductsResponse {
+  // The products on this page.
+  repeated Product products = 1;
+  // Total number of products matching the filter.
+  int64 total_size = 2 [(buf.validate.field).int64.gte = 0];
+  // Cursor for the next page, empty when this is the last page.
+  string next_page_token = 3;
+}
+
+// UpdateProductRequest performs a partial update.
+message UpdateProductRequest {
+  // The id is what the update targets, so it must be present here.
+  option (buf.validate.message).cel = {
+    id: "update_product.id_present"
+    message: "product.id is required for an update"
+    expression: "this.product.id != ''"
+  };
+
+  // The product carrying the new field values.
+  Product product = 1 [(buf.validate.field).required = true];
+  // Which fields to write. Empty means "replace every mutable field".
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+// UpdateProductResponse returns the stored product.
+message UpdateProductResponse {
+  // The updated product.
+  Product product = 1;
+}
+
+// DeleteProductRequest removes a product.
+message DeleteProductRequest {
+  // The product to delete.
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+  // Refuse the delete unless the stored version matches.
+  optional int64 expected_version = 2 [(buf.validate.field).int64.gte = 0];
+}
+
+// DeleteProductResponse is intentionally empty.
+message DeleteProductResponse {}
+
+// CatalogService manages products.
+service CatalogService {
+  // Create a new product.
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/products"
+      body: "product"
+    };
+  }
+  // Fetch a single product.
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
+    option (google.api.http) = {get: "/api/v1/products/{id}"};
+  }
+  // Page through products.
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {
+    option (google.api.http) = {get: "/api/v1/products"};
+  }
+  // Partially update a product.
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse) {
+    option (google.api.http) = {
+      patch: "/api/v1/products/{product.id}"
+      body: "product"
+    };
+  }
+  // Delete a product.
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse) {
+    option (google.api.http) = {delete: "/api/v1/products/{id}"};
+  }
+}
