@@ -29,13 +29,7 @@ type pyAlias struct {
 // both.
 func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.MessageMetadata) {
 	pkgPrefix := string(file.Desc.Package()) + "."
-	imports := &pyImports{
-		self:    file.Desc.Path(),
-		symbols: map[string]bool{},
-		modules: map[string]string{},
-		typing:  map[string]bool{},
-		abc:     map[string]bool{},
-	}
+	imports := newPyImports(file.Desc.Path())
 
 	// Resolving types populates the import set, so it runs before the header.
 	type block struct {

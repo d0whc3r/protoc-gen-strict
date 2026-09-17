@@ -11,11 +11,8 @@ import (
 // becomes `user_pb2`, not `pkg.user_pb2`. Slicing at the last dot of that name
 // used to go out of range.
 func TestImportsRootLevelProto(t *testing.T) {
-	p := &pyImports{
-		self:    "root.proto",
-		symbols: map[string]bool{},
-		modules: map[string]string{"user.proto": "_user_pb2"},
-	}
+	p := newPyImports("root.proto")
+	p.modules["user.proto"] = "_user_pb2"
 
 	want := "import user_pb2 as _user_pb2"
 	for _, line := range p.lines() {
@@ -31,7 +28,7 @@ func TestImportsRootLevelProto(t *testing.T) {
 // every field annotated with a type from a/common.proto silently becomes the
 // same-named type from b/common.proto.
 func TestImportAliasCollision(t *testing.T) {
-	p := &pyImports{self: "root.proto", symbols: map[string]bool{}, modules: map[string]string{}, typing: map[string]bool{}}
+	p := newPyImports("root.proto")
 
 	first := p.base("message:a.Thing", parser.TypeRef{File: "a/common.proto", Name: "Thing"})
 	second := p.base("message:b.Thing", parser.TypeRef{File: "b/common.proto", Name: "Thing"})

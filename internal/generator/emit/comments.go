@@ -12,12 +12,9 @@ import (
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
 
-// The rule comments every overlay carries: a rule with no type equivalent still
-// has to be visible. Both generators render the same lines, in different
-// places.
-
-// Wording both overlays print; only the shape around it differs (a JSDoc block,
-// a comment, an Annotated entry).
+// Wording every overlay prints, so a rule with no type equivalent stays
+// visible; only the shape around it differs (a JSDoc block, a comment, an
+// Annotated entry).
 const (
 	CarriedPrefix     = "Carried into the type: "
 	UnparseablePrefix = "UNPARSEABLE: "

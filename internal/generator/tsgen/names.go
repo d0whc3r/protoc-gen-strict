@@ -32,18 +32,13 @@ var jsReserved = map[string]bool{
 // `[json_name = "external-id"]` renames the wire encoding and leaves the
 // property alone, so reading it off the JSON name would name a property that
 // does not exist — or one that is not an identifier at all.
-func localName(protoName string) string {
-	name := emit.Camel(protoName)
-	if jsReserved[name] {
-		return name + "$"
-	}
-	return name
-}
+func localName(protoName string) string { return escaped(emit.Camel(protoName)) }
 
 // methodName is the property protoc-gen-es gives an RPC on a service
 // descriptor: the name with a lower first letter, and no other conversion.
-func methodName(protoName string) string {
-	name := emit.LowerFirst(protoName)
+func methodName(protoName string) string { return escaped(emit.LowerFirst(protoName)) }
+
+func escaped(name string) string {
 	if jsReserved[name] {
 		return name + "$"
 	}

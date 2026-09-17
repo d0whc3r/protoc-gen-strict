@@ -2,11 +2,8 @@ package emit
 
 import "strings"
 
-// Identifier conversions shared by the emitters. Each mirrors a naming decision
-// the official generator made, so the overlay names the same symbols.
-
 // Camel is protobuf-es's protoCamelCase: underscores capitalise the letter that
-// follows, and a digit clears that, so `port_2_name` is `port2name`.
+// follows, and a digit clears that, so `metric_1st` is `metric1st`.
 func Camel(name string) string {
 	var b strings.Builder
 	capNext := false
@@ -33,7 +30,13 @@ func Camel(name string) string {
 //
 // ponytail: `User.address` and a message named `UserAddress` would both want the
 // name `UserAddress`. Disambiguate only if a schema collides.
-func Pascal(name string) string { return upperFirst(Camel(name)) }
+func Pascal(name string) string {
+	name = Camel(name)
+	if name == "" {
+		return name
+	}
+	return strings.ToUpper(name[:1]) + name[1:]
+}
 
 // LowerFirst lowercases the first letter and leaves the rest alone.
 func LowerFirst(name string) string {
@@ -48,11 +51,4 @@ func upperASCII(c byte) byte {
 		return c - ('a' - 'A')
 	}
 	return c
-}
-
-func upperFirst(name string) string {
-	if name == "" {
-		return name
-	}
-	return strings.ToUpper(name[:1]) + name[1:]
 }

@@ -55,12 +55,13 @@ func TestGolden(t *testing.T) {
 
 	// A golden file with no output means a message or file was dropped, which
 	// the per-file comparison alone would not catch.
-	if !*update {
-		walkGolden(t, func(name string) {
-			if !seen[name] {
-				t.Errorf("golden file %s has no corresponding generated output", name)
-			}
-		})
+	if *update {
+		return
+	}
+	for _, name := range goldenFiles(t) {
+		if !seen[name] {
+			t.Errorf("golden file %s has no corresponding generated output", name)
+		}
 	}
 }
 
@@ -181,8 +182,11 @@ func isDependency(name string) bool {
 	return strings.HasPrefix(name, "google/") || strings.HasPrefix(name, "buf/")
 }
 
-func walkGolden(t *testing.T, fn func(name string)) {
+// goldenFiles lists every checked-in golden file, as a slash path relative to
+// the golden directory — the name the generator would have emitted it under.
+func goldenFiles(t *testing.T) []string {
 	t.Helper()
+	var names []string
 	err := filepath.WalkDir(goldenDir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil || entry.IsDir() {
 			return err
@@ -191,10 +195,11 @@ func walkGolden(t *testing.T, fn func(name string)) {
 		if err != nil {
 			return err
 		}
-		fn(filepath.ToSlash(rel))
+		names = append(names, filepath.ToSlash(rel))
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walk golden dir: %v", err)
 	}
+	return names
 }

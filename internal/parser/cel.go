@@ -35,12 +35,6 @@ var celEnv = sync.OnceValues(func() (*cel.Env, error) {
 	return cel.NewEnv(cel.Variable("this", cel.DynType))
 })
 
-func celRules(rules *validate.FieldRules) ([]CELRule, error) {
-	// A field rule roots `this` at the field, not at a message, so there is no
-	// path to resolve and nothing to translate.
-	return celRulesFrom(nil, rules.GetCel(), rules.GetCelExpression())
-}
-
 // celRulesFrom parses both forms: the full `cel` rule, and the `cel_expression`
 // shorthand, whose id is its own text. A non-nil root is the message `this`
 // refers to, and turns on the translation into narrowing terms.

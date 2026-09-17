@@ -120,19 +120,21 @@ func parseField(field *protogen.Field) (FieldMetadata, error) {
 	meta.Required = rules.GetRequired()
 	meta.Rules = standardRules(rules)
 
-	celRules, err := celRules(rules)
+	// A field rule roots `this` at the field, not at a message, so there is no
+	// path to resolve and nothing to translate.
+	parsed, err := celRulesFrom(nil, rules.GetCel(), rules.GetCelExpression())
 	if err != nil {
 		return meta, err
 	}
-	meta.CEL = celRules
+	meta.CEL = parsed
 	return meta, nil
 }
 
 // The three readers below pull a buf.validate extension off a descriptor's
-// options. Both steps are routinely absent: a descriptor may carry no options
-// at all, and most carry no rules, so a nil result is normal rather than an
-// error. A failed type assertion leaves a typed-nil pointer, which
-// proto.HasExtension reports as unpopulated rather than panicking.
+// options. Options and rules are both routinely absent, so nil is a normal
+// result rather than an error: a failed type assertion leaves a typed-nil
+// pointer, which proto.HasExtension reports as unpopulated rather than
+// panicking.
 
 func fieldRules(desc protoreflect.FieldDescriptor) *validate.FieldRules {
 	opts, _ := desc.Options().(*descriptorpb.FieldOptions)

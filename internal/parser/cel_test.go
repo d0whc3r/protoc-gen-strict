@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	validate "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+)
 
 // TestParseCEL covers the AST walk: identifiers, receiver-call function names,
 // and that a syntax error is reported instead of returned.
@@ -34,8 +38,9 @@ func TestFieldRulesNilSafety(t *testing.T) {
 	if got := standardRules(nil); got != nil {
 		t.Errorf("standardRules(nil) = %v, want nil", got)
 	}
-	got, err := celRules(nil)
+	var rules *validate.FieldRules
+	got, err := celRulesFrom(nil, rules.GetCel(), rules.GetCelExpression())
 	if err != nil || got != nil {
-		t.Errorf("celRules(nil) = %v, %v; want nil, nil", got, err)
+		t.Errorf("celRulesFrom(nil rules) = %v, %v; want nil, nil", got, err)
 	}
 }

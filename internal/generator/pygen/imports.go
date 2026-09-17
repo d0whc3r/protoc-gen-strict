@@ -29,6 +29,16 @@ type pyImports struct {
 	abc     map[string]bool   // names from collections.abc
 }
 
+func newPyImports(self string) *pyImports {
+	return &pyImports{
+		self:    self,
+		symbols: map[string]bool{},
+		modules: map[string]string{},
+		typing:  map[string]bool{},
+		abc:     map[string]bool{},
+	}
+}
+
 // typeOf renders the Python type of a field, ignoring the rules attached to it.
 func (p *pyImports) typeOf(field parser.FieldMetadata) string {
 	p.typing["Annotated"] = true

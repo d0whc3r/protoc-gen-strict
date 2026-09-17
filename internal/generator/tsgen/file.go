@@ -109,8 +109,11 @@ func (f *tsFile) shape(name string) string { return f.record(f.shapes, f.base, n
 // value records an import of a generated const: a schema or a service.
 func (f *tsFile) value(name string) string { return f.record(f.values, f.base, name) }
 
-func (f *tsFile) helper(name string) string {
-	return f.record(f.helpers, relImport(f.out, strings.TrimSuffix(strictTypesFile, ".ts")), name)
+func (f *tsFile) helper(name string) string { return f.record(f.helpers, f.helperModule(), name) }
+
+// helperModule is the specifier for the shared strict/types, seen from here.
+func (f *tsFile) helperModule() string {
+	return relImport(f.out, strings.TrimSuffix(strictTypesFile, ".ts"))
 }
 
 func (f *tsFile) gen(name string) string { return f.record(f.codegen, codegenModule, name) }
@@ -190,7 +193,7 @@ func (f *tsFile) importLines() []string {
 		out = append(out, keyword+"{ "+strings.Join(bindings, ", ")+" } from "+strconv.Quote(module)+";")
 	}
 
-	add(f.helpers, relImport(f.out, strings.TrimSuffix(strictTypesFile, ".ts")), true)
+	add(f.helpers, f.helperModule(), true)
 	add(f.shapes, f.base, true)
 	add(f.values, f.base, false)
 	for _, module := range slices.Sorted(maps.Keys(f.foreign)) {

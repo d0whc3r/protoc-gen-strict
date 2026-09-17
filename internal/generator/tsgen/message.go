@@ -113,16 +113,16 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 	case len(props) == 0:
 		f.P("export type ", strict, " = ", f.helper("Require"), "<", name, ", ", quotedUnion(required), ">;")
 	default:
-		open, close := "", ""
+		before, after := "", ""
 		if len(required) > 0 {
-			open, close = f.helper("Require")+"<", ", "+quotedUnion(required)+">"
+			before, after = f.helper("Require")+"<", ", "+quotedUnion(required)+">"
 		}
-		f.P("export type ", strict, " = ", open, f.helper("Narrow"), "<", name, ", {")
+		f.P("export type ", strict, " = ", before, f.helper("Narrow"), "<", name, ", {")
 		for _, prop := range props {
 			f.doc("  ", prop.doc)
 			f.P("  ", prop.key, ": ", prop.typ, ";")
 		}
-		f.P("}>", close, ";")
+		f.P("}>", after, ";")
 	}
 	f.P()
 }

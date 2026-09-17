@@ -89,20 +89,12 @@ func fieldKeywords(field parser.FieldMetadata) []keyword {
 
 	reversed := reversedBounds(field.Rules)
 
-	var out []keyword
-	add := func(keywords ...keyword) {
-		for _, kw := range keywords {
-			if !slices.ContainsFunc(out, func(seen keyword) bool { return seen.key == kw.key }) {
-				out = append(out, kw)
-			}
-		}
-	}
-
 	// `required` is absent on purpose. grpc-gateway hoists it into the parent
 	// message's required list, which is right for a body schema — but the same
 	// list also marks the flattened query parameter of a GET required, and a
 	// field of an optional sub-message is not. Over-narrowing a request is worse
 	// than leaving the rule to runtime validation.
+	var out []keyword
 	for _, rule := range field.Rules {
 		if itemsIgnored && strings.HasPrefix(rule.Kind, repeatedItems) {
 			continue
@@ -110,7 +102,12 @@ func fieldKeywords(field parser.FieldMetadata) []keyword {
 		if reversed[rule.Kind] {
 			continue
 		}
-		add(ruleKeywords(rule)...)
+		for _, kw := range ruleKeywords(rule) {
+			if slices.ContainsFunc(out, func(seen keyword) bool { return seen.key == kw.key }) {
+				continue
+			}
+			out = append(out, kw)
+		}
 	}
 	return out
 }
