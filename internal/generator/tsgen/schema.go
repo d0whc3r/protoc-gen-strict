@@ -11,7 +11,9 @@ import (
 
 // The retyped descriptors. A Connect or gRPC caller rarely names a request
 // type: it holds a schema or a service descriptor and lets `MessageValidType`
-// report the shape. Re-annotating those is how a narrowing reaches it.
+// report the shape. Re-annotating those is how a narrowing reaches it. It is
+// also what `createStrict` reads to build a message and report its strict type,
+// so every message that narrows gets one, not only an RPC input or output.
 
 // strictSchema emits `<Name>StrictSchema`, the same descriptor object retyped.
 func (f *tsFile) strictSchema(msg parser.MessageMetadata) {
@@ -64,7 +66,7 @@ func (f *tsFile) service(service *protogen.Service) {
 // schemaRef names the schema const a method points at: the strict one where it
 // exists, the generated one otherwise. Either may live in another file.
 func (f *tsFile) schemaRef(fullName string) string {
-	strict := f.ctx.strictSchemas[fullName]
+	strict := f.ctx.needsStrict[fullName]
 	suffix, module := "Schema", esSuffix
 	if strict {
 		suffix, module = "StrictSchema", strictSuffix

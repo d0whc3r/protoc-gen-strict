@@ -93,7 +93,7 @@ func generate(t *testing.T, messages []parser.MessageMetadata) string {
 		t.Fatalf("build protogen plugin: %v", err)
 	}
 
-	WriteFile(gen, gen.Files[0], messages)
+	WriteFile(gen, gen.Files[0], messages, parser.ParseEnums(gen.Files[0]))
 	resp := gen.Response()
 	if resp.Error != nil {
 		t.Fatalf("plugin reported an error: %s", resp.GetError())

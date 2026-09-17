@@ -33,6 +33,7 @@ type FieldMetadata struct {
 	MapValType TypeRef // Type, but for MapValue
 	Optional   bool    // explicit proto3 `optional`
 	Required   bool    // (buf.validate.field).required
+	OutputOnly bool    // (google.api.field_behavior) = OUTPUT_ONLY
 	OneofName  string  // enclosing real oneof, empty when the field is not in one
 	Rules      []Rule
 	CEL        []CELRule
@@ -54,6 +55,10 @@ type MessageMetadata struct {
 	Oneofs   []OneofMetadata
 	CEL      []CELRule // (buf.validate.message).cel rules, which span several fields
 	Comments string
+
+	// Every server-assigned field reachable from this message, as a dotted proto
+	// path, e.g. "product.created_at". Depth-first in declaration order.
+	OutputOnlyPaths []string
 }
 
 // typeRef resolves where a field's type is declared. Scalars need no import, so
@@ -95,4 +100,47 @@ func protoTypeName(desc protoreflect.FieldDescriptor) string {
 	default:
 		return desc.Kind().String()
 	}
+}
+
+// EnumMetadata is one proto enum declaration. No buf.validate rule hangs off an
+// enum, but the member protobuf numbers 0 is the "unset" one by convention —
+// buf lint's ENUM_ZERO_VALUE_SUFFIX names it <ENUM>_UNSPECIFIED — so the
+// generators rule it out of the enum's strict type.
+type EnumMetadata struct {
+	Name     string      // fully qualified proto name, e.g. "shop.inventory.v1.StockMovementKind"
+	Type     TypeRef     // declaring file + package-relative name
+	Comments string      // leading comment on the enum declaration
+	Values   []EnumValue // in declaration order
+}
+
+// EnumValue is one declared member of an enum.
+type EnumValue struct {
+	Name   string // proto member name, e.g. "STOCK_MOVEMENT_KIND_UNSPECIFIED"
+	Number int32
+}
+
+// Zero returns the member numbered 0. Proto3 requires one, but an enum reached
+// through a proto2 descriptor or an import need not have it, and there is
+// nothing to exclude then.
+func (e EnumMetadata) Zero() (EnumValue, bool) {
+	for _, value := range e.Values {
+		if value.Number == 0 {
+			return value, true
+		}
+	}
+	return EnumValue{}, false
+}
+
+// AllAboveZero reports whether every member other than the zero one is
+// positive, which is what makes "at least 1" the same set as "not the zero
+// member". A proto may number a member below zero; then it is not.
+func (e EnumMetadata) AllAboveZero() bool {
+	above := false
+	for _, value := range e.Values {
+		if value.Number < 0 {
+			return false
+		}
+		above = above || value.Number > 0
+	}
+	return above
 }

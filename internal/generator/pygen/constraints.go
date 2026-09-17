@@ -14,6 +14,11 @@ import (
 // is pure Python and depends on nothing.
 const annotatedTypesModule = "annotated_types"
 
+// outputOnlyNote is the AIP-203 annotation `(google.api.field_behavior) =
+// OUTPUT_ONLY`: the server assigns the field and a caller must not set it.
+// annotated_types has no vocabulary for it, so it is carried as metadata text.
+const outputOnlyNote = "google.api.field_behavior = OUTPUT_ONLY"
+
 // lengthConstraints are the rules counting the annotated type itself: code
 // points of a `str`, bytes of a `bytes`, entries of a `Sequence` or a `Mapping`.
 // A rule under `repeated.items` or `map.keys` counts something else and is
@@ -45,6 +50,9 @@ var boundConstraints = map[string]string{
 // carried as a constructor is not also printed as a string.
 func (p *pyImports) metadataOf(field parser.FieldMetadata) []string {
 	var out []string
+	if field.OutputOnly {
+		out = append(out, strconv.Quote(outputOnlyNote))
+	}
 	if field.Required {
 		out = append(out, strconv.Quote(emit.RequiredRule))
 	}
@@ -117,4 +125,50 @@ func pyNumber(value string) bool {
 	}
 	number, err := strconv.ParseFloat(value, 64)
 	return err == nil && !math.IsInf(number, 0) && !math.IsNaN(number)
+}
+
+// enumAliases renders one `<Name>Strict` per enum the file declares: the class
+// protoc-gen-python emitted, annotated so the member numbered 0 is out.
+//
+// It is the only alias here that no buf.validate rule produced. The convention
+// that names that member <ENUM>_UNSPECIFIED makes it "unset" rather than a
+// value, so every field of the enum's type is annotated with the alias.
+func (p *pyImports) enumAliases(enums []parser.EnumMetadata) []pyBlock {
+	var out []pyBlock
+	for _, enum := range enums {
+		zero, ok := enum.Zero()
+		if !ok {
+			continue
+		}
+		p.typing["Annotated"] = true
+		p.symbols[topLevel(enum.Type.Name)] = true
+
+		// The generated class subclasses int, so "at least 1" is the same set as
+		// "not the zero member" — but only where no member is below zero.
+		metadata := strconv.Quote("zero member " + zero.Name + " ruled out")
+		if enum.AllAboveZero() {
+			p.annotated["Ge"] = true
+			metadata = "Ge(1)"
+		}
+
+		alias := pyAlias{
+			name:     strings.ReplaceAll(enum.Type.Name, ".", "") + "Strict",
+			typ:      enum.Type.Name,
+			metadata: []string{metadata},
+		}
+		var doc []string
+		if enum.Comments != "" {
+			doc = append(doc, emit.OneLine(enum.Comments))
+		}
+		out = append(out, pyBlock{
+			doc: append(doc,
+				"Without "+zero.Name+", the member protobuf numbers 0, which this overlay",
+				"reads as \"unset\" rather than a value. No buf.validate rule says so; the",
+				"convention that names it <ENUM>_UNSPECIFIED does.",
+			),
+			aliases: []pyAlias{alias},
+		})
+		p.enumStrict["enum:"+enum.Name] = alias.name
+	}
+	return out
 }

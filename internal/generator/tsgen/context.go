@@ -26,27 +26,32 @@ type Context struct {
 	celTrees map[string]*celNode
 	celNotes map[string][]celNote
 
-	// Messages that get a <Name>Strict type: those with a rule of their own, and
-	// those reaching one through a message-typed field.
+	// Messages that get a <Name>Strict type and a <Name>StrictSchema: those with
+	// a rule of their own, and those reaching one through a message-typed field.
 	needsStrict map[string]bool
-	// Messages that also get a <Name>StrictSchema: an RPC input or output that
-	// narrows. Any other message would get a const nothing dispatches on.
-	strictSchemas map[string]bool
+
+	// Enums this run declares a <Name>Strict alias for, by fully qualified proto
+	// name, plus the declarations to emit, by proto file. An enum from a file
+	// nobody asked to generate has no alias, so a field of its type keeps the
+	// type protoc-gen-es gave it.
+	strictEnums map[string]bool
+	enumsByFile map[string][]parser.EnumMetadata
 }
 
 // New resolves every message the run parsed, once. files is the whole request,
-// because a narrowing reaches across files; parsed holds only the generated
-// ones, keyed by proto path, which is the set this run can narrow.
-func New(files []*protogen.File, parsed map[string][]parser.MessageMetadata) *Context {
+// because a narrowing reaches across files; parsed and enums hold only the
+// generated ones, keyed by proto path, which is the set this run can narrow.
+func New(files []*protogen.File, parsed map[string][]parser.MessageMetadata, enums map[string][]parser.EnumMetadata) *Context {
 	c := &Context{
-		messages:      map[string]parser.MessageMetadata{},
-		fileOf:        map[string]string{},
-		pkgOf:         map[string]string{},
-		byFile:        map[string][]parser.MessageMetadata{},
-		celTrees:      map[string]*celNode{},
-		celNotes:      map[string][]celNote{},
-		needsStrict:   map[string]bool{},
-		strictSchemas: map[string]bool{},
+		messages:    map[string]parser.MessageMetadata{},
+		fileOf:      map[string]string{},
+		pkgOf:       map[string]string{},
+		byFile:      map[string][]parser.MessageMetadata{},
+		celTrees:    map[string]*celNode{},
+		celNotes:    map[string][]celNote{},
+		needsStrict: map[string]bool{},
+		strictEnums: map[string]bool{},
+		enumsByFile: enums,
 	}
 
 	// Where a type is declared matters for every file in the request, not only
@@ -54,7 +59,16 @@ func New(files []*protogen.File, parsed map[string][]parser.MessageMetadata) *Co
 	// generate, and the overlay still has to name its module.
 	for _, file := range files {
 		c.pkgOf[file.Desc.Path()] = string(file.Desc.Package())
-		indexMessages(c.fileOf, file.Desc.Path(), file.Messages)
+		indexTypes(c.fileOf, file.Desc.Path(), file.Messages, file.Enums)
+	}
+
+	// Only an enum with a zero member has anything to exclude.
+	for _, declared := range enums {
+		for _, enum := range declared {
+			if _, ok := enum.Zero(); ok {
+				c.strictEnums[enum.Name] = true
+			}
+		}
 	}
 
 	for _, file := range files {
@@ -93,29 +107,18 @@ func New(files []*protogen.File, parsed map[string][]parser.MessageMetadata) *Co
 			changed = true
 		}
 	}
-
-	for _, file := range files {
-		if !file.Generate {
-			continue
-		}
-		for _, service := range file.Services {
-			for _, method := range service.Methods {
-				for _, name := range []string{string(method.Input.Desc.FullName()), string(method.Output.Desc.FullName())} {
-					if c.needsStrict[name] {
-						c.strictSchemas[name] = true
-					}
-				}
-			}
-		}
-	}
 	return c
 }
 
-// indexMessages records the file each message is declared in, nested included.
-func indexMessages(fileOf map[string]string, path string, msgs []*protogen.Message) {
+// indexTypes records the file each message and enum is declared in, nested
+// included.
+func indexTypes(fileOf map[string]string, path string, msgs []*protogen.Message, enums []*protogen.Enum) {
+	for _, enum := range enums {
+		fileOf[string(enum.Desc.FullName())] = path
+	}
 	for _, msg := range msgs {
 		fileOf[string(msg.Desc.FullName())] = path
-		indexMessages(fileOf, path, msg.Messages)
+		indexTypes(fileOf, path, msg.Messages, msg.Enums)
 	}
 }
 
@@ -134,7 +137,7 @@ func (c *Context) narrowsItself(msg parser.MessageMetadata) bool {
 		if field.OneofName != "" {
 			continue
 		}
-		if !c.fieldNarrowing(field).isZero() {
+		if field.OutputOnly || !c.fieldNarrowing(field).isZero() {
 			return true
 		}
 	}

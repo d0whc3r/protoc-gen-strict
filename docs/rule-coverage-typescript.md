@@ -9,15 +9,24 @@ they turn into, and what is left to runtime validation.
 
 Every narrowing is built from the exports of the generated `strict/types` module:
 
-- The nominal string types **`Uuid`**, **`Email`** and **`NonEmpty`**, each with
-  its own `unique symbol` so `Uuid & NonEmpty` stays inhabitable. Under a shared
-  key that intersection would resolve to `"Uuid" & "NonEmpty"`, which is `never`.
-  Their constructors are generic in the argument so they compose:
-  `nonEmpty(uuid(value))` produces `Uuid & NonEmpty`.
+- The string shape types **`Uuid`**, `` `${string}-${string}-${string}-${string}-${string}` ``,
+  and **`Email`**, `` `${string}@${string}.${string}` ``. A template literal type
+  is the whole check: a literal of the right shape is assignable and a misspelt
+  one is not, with no constructor to call and nothing to brand. It is a shape
+  check and nothing more — protovalidate stays the authority on validity. A value
+  only known at runtime is a bare `string`, which fits no shape; that one needs a
+  cast.
 - **`Narrow<T, M>`**, which replaces the type of the named properties and keeps
   every other property of `T` as it is.
 - **`Require<T, K>`**, which is `T & Required<Pick<T, K>>`.
+- **`Immutable<T, K>`**, which is `Omit<T, K> & { readonly [P in K]: T[P] }`.
 - **`NonEmptyList<T>`**, the tuple `[T[number], ...T[number][]]`.
+- **`createStrict(schema, init)`**, which builds a message from a
+  `<Message>StrictSchema` and reports its strict type. It checks the initializer
+  against the narrowing, so a string literal the compiler can see fits the shape
+  is accepted and a bare `string` is not. A field a rule pins to the
+  value `create` writes — `Uuid & ""`, `Extract<Enum, 0>`, `never` — may be left
+  out, and takes only that value when written.
 
 Only `Narrow` is hand-written, and only because the standard library has no way
 to say it. The obvious spelling, `Omit<T, keyof M> & M`, drops the `?` of every
@@ -29,8 +38,9 @@ is homomorphic over `keyof T`, so optionality and readonly survive.
 Its constraint on `M` also makes every override prove it narrows the property it
 replaces, which is what `make verify` tests the emitter with.
 
-A message with any narrowing becomes `Narrow<<Message>, { ... }>`. If a rule also
-makes fields required, that wraps the result: `Require<Narrow<...>, "a" | "b">`.
+A message with any narrowing becomes `Narrow<<Message>, { ... }>`. Read-only and
+required fields wrap that result, innermost first:
+`Require<Immutable<Narrow<...>, "id">, "a" | "b">`.
 
 ## Field rules: `(buf.validate.field)`
 
@@ -38,9 +48,8 @@ makes fields required, that wraps the result: `Require<Narrow<...>, "a" | "b">`.
 |---|---|
 | `string.uuid = true` | `Uuid` |
 | `string.email = true` | `Email` |
-| `string.min_len` of at least one | `NonEmpty` |
-| `enum.not_in` | `Exclude<M["f"], ...>` over the listed numbers |
-| `enum.in`, `enum.const` | `Extract<M["f"], ...>` |
+| `enum.not_in` | `Exclude<EStrict, ...>` over the listed numbers |
+| `enum.in`, `enum.const` | `Extract<EStrict, ...>` |
 | `repeated.min_items` of at least one | `NonEmptyList<M["f"]>` |
 | `required` | see below |
 
@@ -50,12 +59,39 @@ repeated `Product` becomes `ProductStrict[]`.
 
 The enum rules work without this plugin learning a single member name: a numeric
 TypeScript enum member is a subtype of its numeric literal, and protovalidate
-stores those rule values as plain `int32`, so `Exclude<StockMovement["kind"], 0>`
-removes the `UNSPECIFIED` member directly. Every base type is an indexed access
+stores those rule values as plain `int32`, so `Extract<FlavorStrict, 1 | 2>`
+filters the generated enum directly. Every other base type is an indexed access
 into the generated type for the same reason; see [Internals](internals.md).
 
-`NonEmpty` is dropped when `Uuid` or `Email` is already there: neither is ever
-empty, so the second brand would only cost the caller a constructor.
+`string.min_len` carries nothing. No string shape excludes the empty string, and
+saying so would take a nominal type with a constructor as the only way to produce
+it — which is what a caller then has to call on every value. The bound is
+reported under "Left to runtime validation" instead.
+
+### Enums: the excluded zero
+
+This is the one narrowing no `buf.validate` rule asked for. Every enum the run
+generates gets a strict type of its own, without the member protobuf numbers 0:
+
+```ts
+/** StockMovementKind classifies a change in stock level. … */
+export type StockMovementKindStrict = Exclude<StockMovementKind, 0>;
+```
+
+Every field of that enum's type takes it, **rule or no rule**. The convention
+behind `buf lint`'s `ENUM_ZERO_VALUE_SUFFIX` is the whole justification: the
+member named `<ENUM>_UNSPECIFIED` is "unset", not a value.
+
+It narrows harder than protovalidate does. A field with no `required`,
+`enum.not_in` or `enum.in` rule accepts `UNSPECIFIED` at runtime and the strict
+type rejects it. Reach for the generated type rather than its strict overlay
+where a schema means to allow the unset member.
+
+An enum rule stacks on top of it — `Exclude<StockMovementKindStrict, 3>` — so
+the zero stays out however the rule is written, and an `enum.not_in = [0]` that
+only repeats the exclusion is folded away. An enum declared in a file the run
+was not asked to generate has no strict type, and its fields keep the type
+protoc-gen-es gave them.
 
 ### `required`
 
@@ -66,13 +102,12 @@ members and fields with the `optional` label.
 | Field | `required` becomes |
 |---|---|
 | A message field, or one labelled `optional` | `Require<..., "f">`, and `NonNullable<M["f"]>` if nothing else replaced the type |
-| A plain `string` | `NonEmpty`; protovalidate counts the empty string as unset |
-| A plain enum | `Exclude<M["f"], 0>` |
+| A plain enum | Already carried: the enum's strict type excludes the zero |
 | A plain `repeated` | `NonEmptyList<M["f"]>` |
 | Anything else | Left to runtime validation |
 
-The last row is numerics, bytes and maps: their zero is a value the generated
-type has no way to name apart from the rest.
+The last row is strings, numerics, bytes and maps: their zero is a value the
+generated type has no way to name apart from the rest.
 
 ## Message rules: `(buf.validate.message).cel`
 
@@ -81,8 +116,8 @@ Only conjunctions (`&&`) of these shapes, on paths rooted at `this`:
 | CEL | Field type becomes |
 |---|---|
 | `this.x == ''` | intersected with `""` |
-| `this.x != ''` | intersected with `NonEmpty` |
-| `this.x == 0` on an enum | `Extract<..., 0>`, the zero-numbered member |
+| `this.x != ''` | Left to runtime, for the same reason `string.min_len` is |
+| `this.x == 0` on an enum | `Extract<EStrict, 0>`, which is `never`: the rule demands the member the enum's strict type rules out |
 | `this.x == 0` on anything else | Left to runtime: `0` is a number, a bigint or a duration depending on a choice protoc-gen-es made, not this plugin |
 
 Both argument orders are read, so `'' == this.id` translates like
@@ -95,17 +130,18 @@ and says nothing about the property being there:
 
 | CEL | Field tracks presence | Field does not |
 |---|---|---|
-| `has(this.x)` | `NonNullable<M["x"]>`, and the field is lifted into `Require<..., "x">` | a `string` is intersected with `NonEmpty`; anything else is left to runtime |
+| `has(this.x)` | `NonNullable<M["x"]>`, and the field is lifted into `Require<..., "x">` | left to runtime: it reads as `!= ''` on a string, and nothing at all elsewhere |
 | `!has(this.x)` | `never`; the field stays optional, so it can be omitted but not set | a `string` is intersected with `""`, an enum becomes `Extract<..., 0>`; anything else is left to runtime |
 
 The `NonNullable` matters: `Require` drops the `?` but not an `undefined`
 written into the property type itself, which protoc-gen-es does emit.
 
-Presence and a value bound on one field are separate constraints and both hold:
-`has(this.nickname) && this.nickname != ''` narrows to
-`NonNullable<M["nickname"]> & NonEmpty` *and* lifts `nickname` into `Require`.
-Two conjuncts that both narrow the *value* of one field contradict each other;
-the first is carried and the second reported under "Left to runtime validation".
+Presence and a value bound on one field are separate constraints, and each is
+carried on its own: `has(this.nickname) && this.nickname != ''` narrows to
+`NonNullable<M["nickname"]>` and lifts `nickname` into `Require`, while the
+`!= ''` half is reported under "Left to runtime validation". Two conjuncts that
+both narrow the *value* of one field contradict each other; the first is carried
+and the second reported the same way.
 
 A term **intersects** with what the field already had rather than replacing it.
 That keeps `Narrow`'s constraint satisfied by construction, and it says the truth
@@ -171,6 +207,76 @@ under "Left to runtime validation" on the type itself.
 A `(buf.validate.message).oneof` rule names fields that are ordinary properties,
 with no union to constrain, so it is reported as left to runtime validation.
 
+## Server-assigned fields: `google.api.field_behavior`
+
+The one annotation here that is not a `buf.validate` rule.
+`(google.api.field_behavior) = OUTPUT_ONLY` is AIP-203 for "the server assigns
+this, a caller must not set it", which is a `readonly` property:
+
+```ts
+export type ProductStrict = Require<Immutable<Narrow<Product, {
+  id: Uuid;
+}>, "id" | "createdAt" | "updatedAt">, "price">;
+```
+
+Reading the field is unchanged and the value keeps the type protoc-gen-es gave
+it; assigning to it is a compile error. An optional field stays optional —
+`Immutable` is homomorphic over `T`, like `Narrow`.
+
+`Narrow` alone cannot say it: it maps over `keyof T`, so every property keeps
+the modifiers `T` declared whatever the override says. Hence the second helper.
+
+The names are also emitted apart from the type, so code that has to *name* a
+field — a `google.protobuf.FieldMask`, a form, a diff — can read them. They are
+dotted proto paths, the form a FieldMask carries, not the camelCase property:
+
+```ts
+export const ProductOutputOnlyFields = [
+  "id",
+  "created_by_email",
+  "created_at",
+  "created_at.seconds",
+  "created_at.nanos",
+  "updated_at",
+  "updated_at.seconds",
+  "updated_at.nanos",
+  "published_at",
+  "published_at.seconds",
+  "published_at.nanos",
+  "version",
+] as const;
+```
+
+The list goes deeper than the type does. `Immutable` can only speak about this
+message's own properties, but the server that assigns a message field assigns
+everything under it, and a mask path can name a member of it. So the list
+carries the whole subtree, and a message that declares no `OUTPUT_ONLY` field of
+its own still gets the paths it reaches through the ones it wraps:
+
+```ts
+export const CreateProductRequestOutputOnlyFields = [
+  "product.id",
+  "product.created_at",
+  // …
+] as const;
+```
+
+A repeated or map field ends a path: a FieldMask may not name a member of one.
+
+```ts
+const paths = updateMask.paths.filter(
+  (path) => !(ProductOutputOnlyFields as readonly string[]).includes(path),
+);
+```
+
+A field inside a `oneof` is listed too. Nothing can make one arm of a
+discriminated union readonly, so the list is the only place it shows.
+
+The other `field_behavior` values are not carried. `REQUIRED` is
+`(buf.validate.field).required`'s job, and protovalidate is what enforces it;
+`IMMUTABLE` and `INPUT_ONLY` describe a transition between two messages, which a
+single type cannot see.
+
 ## What is deliberately not carried
 
 - **A field with `ignore` set.** `IGNORE_ALWAYS` drops its rules outright;
@@ -188,7 +294,7 @@ with no union to constrain, so it is reported as left to runtime validation.
   form, which is fragile for little gain.
 - **Rules under `repeated.items` and `map.keys` / `map.values`.** They describe
   the element, and protoc-gen-es types a map as an index signature.
-- **The exact bound of a partial rule.** `min_len: 3` becomes plain `NonEmpty`
-  and `min_items: 3` becomes plain `NonEmptyList`; the number stays in the JSDoc.
+- **The exact bound of a partial rule.** `min_items: 3` becomes plain
+  `NonEmptyList`; the number stays in the JSDoc.
   Each property lists every rule on its field and then names the ones the type
   carries, so the gap is visible rather than implied.

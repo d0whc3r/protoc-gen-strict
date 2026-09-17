@@ -19,7 +19,25 @@ from typing import Annotated
 from annotated_types import Ge, Gt, Le, MaxLen, MinLen
 
 from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
-from shop.common.v1.common_pb2 import Currency
+from shop.common.v1.common_pb2 import Currency, SortDirection
+
+# Currency is the ISO-4217 subset this demo API accepts.
+# Without CURRENCY_UNSPECIFIED, the member protobuf numbers 0, which this overlay
+# reads as "unset" rather than a value. No buf.validate rule says so; the
+# convention that names it <ENUM>_UNSPECIFIED does.
+CurrencyStrict = Annotated[
+    Currency,
+    Ge(1),
+]
+
+# SortDirection orders a list response.
+# Without SORT_DIRECTION_UNSPECIFIED, the member protobuf numbers 0, which this overlay
+# reads as "unset" rather than a value. No buf.validate rule says so; the
+# convention that names it <ENUM>_UNSPECIFIED does.
+SortDirectionStrict = Annotated[
+    SortDirection,
+    Ge(1),
+]
 
 # Money is a fixed-point amount, split into whole units and nanos the way google.type.Money does.
 # cel[money.consistent_sign]: this.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)
@@ -37,7 +55,7 @@ MoneyNanos = Annotated[
     Le(999999999),
 ]
 MoneyCurrency = Annotated[
-    Currency,
+    CurrencyStrict,
     "required",
     "enum.defined_only = true",
     "enum.not_in = [0]",

@@ -73,9 +73,94 @@ and protoc-gen-pyi types every integer width as `int`.
   display, and re-parsing a list out of that form is the same fragility the other
   targets declined.
 
+## Server-assigned fields: `google.api.field_behavior`
+
+`(google.api.field_behavior) = OUTPUT_ONLY` is AIP-203 for "the server assigns
+this, a caller must not set it". `annotated_types` has no vocabulary for it, so
+it is carried as metadata text — and it is the only annotation that gives an
+otherwise ruleless field an alias of its own:
+
+```python
+ProductCreatedAt = Annotated[
+    _google_protobuf_timestamp_pb2.Timestamp,
+    "google.api.field_behavior = OUTPUT_ONLY",
+]
+```
+
+The names are also emitted apart from the aliases, as the tuple
+`<Message>OutputOnlyFields`, so an update mask can subtract them:
+
+```python
+ProductOutputOnlyFields = (
+    "id",
+    "created_by_email",
+    "created_at",
+    "created_at.seconds",
+    "created_at.nanos",
+    "updated_at",
+    "updated_at.seconds",
+    "updated_at.nanos",
+    "published_at",
+    "published_at.seconds",
+    "published_at.nanos",
+    "version",
+)
+
+mask.paths[:] = [p for p in mask.paths if p not in ProductOutputOnlyFields]
+```
+
+They are dotted paths: the server that assigns a message field assigns
+everything under it, and a mask path can name a member of it. A message that
+declares no `OUTPUT_ONLY` field of its own still gets the paths it reaches —
+`CreateProductRequestOutputOnlyFields` is `("product.id", "product.created_at",
+…)`. A repeated or map field ends a path, since a FieldMask may not name a
+member of one.
+
+The TypeScript overlay makes the same field a `readonly` property. Python has
+nowhere to put that: the message class comes from a metaclass, and its
+attributes are writable whatever the alias says.
+
+## Enums: the excluded zero
+
+The one alias no `buf.validate` rule produced. Every enum the run generates gets
+a `<Name>Strict` of its own, without the member protobuf numbers 0:
+
+```python
+# StockMovementKind classifies a change in stock level.
+# Without STOCK_MOVEMENT_KIND_UNSPECIFIED, the member protobuf numbers 0, …
+StockMovementKindStrict = Annotated[
+    StockMovementKind,
+    Ge(1),
+]
+```
+
+`Ge(1)` is the whole narrowing, and it is real enforcement: protoc-gen-pyi
+declares the class as an `int` subclass, so "at least 1" is the same set as "not
+the zero member". The convention behind `buf lint`'s `ENUM_ZERO_VALUE_SUFFIX` is
+the justification — the member named `<ENUM>_UNSPECIFIED` is "unset", not a
+value — so it holds with or without a rule, and it narrows harder than
+protovalidate does.
+
+Two cases fall back to a metadata string instead of `Ge(1)`, because "at least
+1" would then be the wrong set: an enum numbering a member below zero, and an
+enum whose only member is the zero.
+
+Every field alias of that enum's type is annotated with the strict alias rather
+than the bare class, so `Money.currency` is `Annotated[CurrencyStrict, …]`.
+
+**Where Python stops short of TypeScript.** The alias is what carries the
+exclusion, and a field with no rules of its own gets no alias — so a bare enum
+field is left with the class protoc-gen-python declared, where the TypeScript
+overlay would have retyped it. Nor does an enum declared in another proto file
+reach its alias: the overlays do not import one another, so such a field keeps
+the bare class too.
+
+## Naming
+
 The alias name is the message name and the field name, so `User.email` is
 `UserEmail` and `Warehouse.Address.city` is `WarehouseAddressCity`. A field with
-no rules gets no alias.
+no rules gets no alias. An enum's alias is its own name plus `Strict`, and it
+holds that name: a field alias is what gets renamed around it.
 
 A name a class in the same file already holds gets a trailing underscore
 instead: the enum typing `Product.status` is itself named `ProductStatus`, and
@@ -95,6 +180,7 @@ first.
 | The rule becomes the type: `Uuid`, `NonEmptyList<...>`, `Exclude<...>` | The type stays what protoc-gen-pyi declared (`str`, `Sequence[str]`, `Mapping[str, str]`), and the rule is one metadata entry next to it |
 | `required` lifts the field into `Require<..., "f">` | `"required"`, the first metadata entry; the field is declared exactly as before |
 | A message-typed field becomes `MoneyStrict` | It stays the plain class, `_shop_common_v1_common_pb2.Money`; there is no strict class to point at |
+| Every enum field becomes `EStrict`, the enum without its zero member | The enum gets the same `EStrict` alias, carried as `Ge(1)`; only a field that already has an alias is annotated with it |
 | A rule with no type equivalent goes to the JSDoc, under "Left to runtime validation" | There is no such list: a constructor is what "carried" looks like here, and a string is what "left to runtime" looks like |
 | `(buf.validate.oneof).required` removes the `{ case: undefined }` arm | A comment above the message's aliases: `# required oneof key: exactly one of id, sku` |
 | A message-level CEL rule narrows the fields on its path, or is reported | Always a comment above the message's aliases, with the expression, its message and the idents and functions the parse found |

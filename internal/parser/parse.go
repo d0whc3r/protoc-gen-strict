@@ -5,9 +5,11 @@ package parser
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	validate "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -41,10 +43,42 @@ func ParseFile(file *protogen.File) ([]MessageMetadata, error) {
 	return out, nil
 }
 
+// ParseEnums walks every enum the file declares, nested ones included.
+func ParseEnums(file *protogen.File) []EnumMetadata {
+	var out []EnumMetadata
+	var walk func(enums []*protogen.Enum, msgs []*protogen.Message)
+	walk = func(enums []*protogen.Enum, msgs []*protogen.Message) {
+		for _, enum := range enums {
+			out = append(out, parseEnum(enum))
+		}
+		for _, msg := range msgs {
+			walk(msg.Enums, msg.Messages)
+		}
+	}
+	walk(file.Enums, file.Messages)
+	return out
+}
+
+func parseEnum(enum *protogen.Enum) EnumMetadata {
+	out := EnumMetadata{
+		Name:     string(enum.Desc.FullName()),
+		Type:     refTo(enum.Desc),
+		Comments: strings.TrimSpace(string(enum.Comments.Leading)),
+	}
+	for _, value := range enum.Values {
+		out.Values = append(out.Values, EnumValue{
+			Name:   string(value.Desc.Name()),
+			Number: int32(value.Desc.Number()),
+		})
+	}
+	return out
+}
+
 func parseMessage(msg *protogen.Message) (MessageMetadata, error) {
 	out := MessageMetadata{
-		Name:     string(msg.Desc.FullName()),
-		Comments: strings.TrimSpace(string(msg.Comments.Leading)),
+		Name:            string(msg.Desc.FullName()),
+		Comments:        strings.TrimSpace(string(msg.Comments.Leading)),
+		OutputOnlyPaths: outputOnlyPaths(msg.Desc),
 	}
 	for _, field := range msg.Fields {
 		meta, err := parseField(field)
@@ -96,12 +130,13 @@ func parseMessage(msg *protogen.Message) (MessageMetadata, error) {
 func parseField(field *protogen.Field) (FieldMetadata, error) {
 	desc := field.Desc
 	meta := FieldMetadata{
-		Name:      string(desc.Name()),
-		ProtoType: protoTypeName(desc),
-		Type:      typeRef(desc),
-		Repeated:  desc.IsList(),
-		IsMap:     desc.IsMap(),
-		Optional:  desc.HasOptionalKeyword(),
+		Name:       string(desc.Name()),
+		ProtoType:  protoTypeName(desc),
+		Type:       typeRef(desc),
+		Repeated:   desc.IsList(),
+		IsMap:      desc.IsMap(),
+		Optional:   desc.HasOptionalKeyword(),
+		OutputOnly: outputOnly(desc),
 	}
 	if desc.IsMap() {
 		meta.MapKey = protoTypeName(desc.MapKey())
@@ -152,6 +187,53 @@ func messageRules(desc protoreflect.MessageDescriptor) *validate.MessageRules {
 	}
 	rules, _ := proto.GetExtension(opts, validate.E_Message).(*validate.MessageRules)
 	return rules
+}
+
+// outputOnly reports whether the field is one the server assigns. It is not a
+// buf.validate rule: google.api.field_behavior is the AIP-203 annotation, and
+// OUTPUT_ONLY is the value saying a caller must not set the field.
+func outputOnly(desc protoreflect.FieldDescriptor) bool {
+	opts, _ := desc.Options().(*descriptorpb.FieldOptions)
+	if !proto.HasExtension(opts, annotations.E_FieldBehavior) {
+		return false
+	}
+	behaviors, _ := proto.GetExtension(opts, annotations.E_FieldBehavior).([]annotations.FieldBehavior)
+	return slices.Contains(behaviors, annotations.FieldBehavior_OUTPUT_ONLY)
+}
+
+// outputOnlyPaths lists every server-assigned field reachable from the message
+// as a dotted proto path, the form a google.protobuf.FieldMask carries. A field
+// under an OUTPUT_ONLY message field is server-assigned too — the whole subtree
+// is — and a writable message field is walked all the same, so a nested
+// server-assigned field surfaces as "product.id".
+//
+// A repeated or map field is never walked into: a FieldMask path may not
+// continue past one. Neither is a message already on the path, which is what
+// terminates a self-referential message and google.protobuf.Struct.
+func outputOnlyPaths(desc protoreflect.MessageDescriptor) []string {
+	var out []string
+
+	var walk func(md protoreflect.MessageDescriptor, prefix string, assigned bool, seen []protoreflect.FullName)
+	walk = func(md protoreflect.MessageDescriptor, prefix string, assigned bool, seen []protoreflect.FullName) {
+		fields := md.Fields()
+		for i := range fields.Len() {
+			field := fields.Get(i)
+			path := prefix + string(field.Name())
+			serverAssigned := assigned || outputOnly(field)
+			if serverAssigned {
+				out = append(out, path)
+			}
+
+			child := field.Message()
+			if child == nil || field.IsList() || field.IsMap() || slices.Contains(seen, child.FullName()) {
+				continue
+			}
+			walk(child, path+".", serverAssigned, append(seen, child.FullName()))
+		}
+	}
+
+	walk(desc, "", false, []protoreflect.FullName{desc.FullName()})
+	return out
 }
 
 func oneofRules(desc protoreflect.OneofDescriptor) *validate.OneofRules {

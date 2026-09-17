@@ -60,7 +60,10 @@ func (c *Context) buildCELTree(msg parser.MessageMetadata) (*celNode, []celNote)
 		}
 		note.Skipped = rule.Skipped
 		for _, term := range rule.Terms {
-			if !c.placeable(msg, term.Path) {
+			// A `!= ""` conjunct has no type equivalent for the same reason
+			// string.min_len has none: no string shape excludes the empty
+			// string. The path may still be unreachable on top of that.
+			if term.Kind == parser.TermNonEmpty || !c.placeable(msg, term.Path) {
 				note.Skipped = append(note.Skipped, term.Source)
 				continue
 			}

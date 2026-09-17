@@ -21,6 +21,7 @@ func Run(gen *protogen.Plugin, opts Options) error {
 	// gen.Files holds every transitive import; only the ones on the command
 	// line have Generate set, and only those are parsed.
 	parsed := map[string][]parser.MessageMetadata{}
+	enums := map[string][]parser.EnumMetadata{}
 	for _, file := range gen.Files {
 		if !file.Generate {
 			continue
@@ -30,13 +31,14 @@ func Run(gen *protogen.Plugin, opts Options) error {
 			return err
 		}
 		parsed[file.Desc.Path()] = messages
+		enums[file.Desc.Path()] = parser.ParseEnums(file)
 	}
 
 	// Resolution spans every file in the request, not only the parsed ones,
 	// because a narrowing reaches across files (see tsgen.Context).
 	var ts *tsgen.Context
 	if opts.TypeScript() {
-		ts = tsgen.New(gen.Files, parsed)
+		ts = tsgen.New(gen.Files, parsed, enums)
 	}
 
 	// The OpenAPI configuration is one file keyed by fully qualified names, so
@@ -47,15 +49,15 @@ func Run(gen *protogen.Plugin, opts Options) error {
 		if !file.Generate {
 			continue
 		}
-		messages := parsed[file.Desc.Path()]
-		if len(messages) == 0 && len(file.Services) == 0 {
+		messages, declared := parsed[file.Desc.Path()], enums[file.Desc.Path()]
+		if len(messages) == 0 && len(declared) == 0 && len(file.Services) == 0 {
 			continue
 		}
 		if opts.TypeScript() {
 			tsgen.Write(gen, file, ts)
 		}
 		if opts.Python() {
-			pygen.WriteFile(gen, file, messages)
+			pygen.WriteFile(gen, file, messages, declared)
 		}
 		if opts.OpenAPI() {
 			openAPI = append(openAPI, messages...)

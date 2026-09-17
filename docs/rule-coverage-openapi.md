@@ -55,10 +55,18 @@ Unlike the TypeScript overlay, the exact bound survives. `min_len: 3` is
   `{"type": "string", "format": "int64"}`, where a `minimum` describes nothing.
 - **`bytes` rules.** Their length rules count raw bytes, not the base64 a client
   sends.
-- **Enum rules.** None has an entry. The second pass does set
-  `omit_enum_default_value=true`, which drops the `UNSPECIFIED` member from every
-  enum, but that is a generator flag rather than anything a rule asked for.
+- **Enum rules.** None has an entry. The zero member is still dropped from every
+  enum, which is the same narrowing the TypeScript and Python overlays make — but
+  the second pass gets it from protoc-gen-openapiv2's own
+  `omit_enum_default_value=true` flag, not from anything this plugin writes into
+  the config. An enum field renders as a `$ref` to a shared definition, and a
+  per-field `enum` keyword beside a `$ref` is dropped by the readers, so there is
+  nothing for the config to say. Set the flag, as `buf.gen.openapi.yaml` does.
 - **`const`, `in` and `not_in`,** on every type.
+- **`(google.api.field_behavior)`.** protoc-gen-openapiv2 reads the annotation
+  itself — `OUTPUT_ONLY` becomes `readOnly: true`, `REQUIRED` joins the parent's
+  required list — so a second opinion in the config would only fight it. The
+  TypeScript and Python overlays carry it because nothing else does.
 - **CEL rules,** field-level and message-level, and the `oneof` rules. A
   cross-field constraint has nowhere to go in a per-field JSONSchema.
 - **A bound of zero.** grpc-gateway's swagger writer tags `minimum` and

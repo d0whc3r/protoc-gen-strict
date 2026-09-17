@@ -425,7 +425,7 @@ message AmbiguityCoverage {
   ];
   // A name every JavaScript object already carries. protobuf-es escapes the
   // property with a trailing `$`.
-  string constructor = 2 [(buf.validate.field).string.min_len = 1];
+  string constructor = 2 [(buf.validate.field).string.uuid = true];
   // Narrowed to non-empty by the implicit-presence rule above.
   string label = 4;
   // Narrowed to empty by the implicit-presence rule above.

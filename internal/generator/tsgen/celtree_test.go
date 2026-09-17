@@ -54,8 +54,8 @@ func TestCELTermOnOwnField(t *testing.T) {
 		CEL: []parser.CELRule{{
 			ID: "user.id",
 			Terms: []parser.CELTerm{{
-				Kind:   "nonEmpty",
-				Source: `this.id != ""`,
+				Kind:   parser.TermEmpty,
+				Source: `this.id == ""`,
 				Path:   []string{"id"},
 			}},
 		}},
@@ -64,8 +64,8 @@ func TestCELTermOnOwnField(t *testing.T) {
 	c := &Context{messages: map[string]parser.MessageMetadata{msg.Name: msg}}
 	tree, notes := c.buildCELTree(msg)
 
-	if got := tree.children["id"]; got == nil || got.term != "nonEmpty" {
-		t.Errorf("tree.children[\"id\"] = %+v, want a nonEmpty term", got)
+	if got := tree.children["id"]; got == nil || got.term != parser.TermEmpty {
+		t.Errorf("tree.children[\"id\"] = %+v, want an empty term", got)
 	}
 	if len(notes) != 1 || !notes[0].Carried || len(notes[0].Skipped) != 0 {
 		t.Errorf("notes = %+v, want one carried note with nothing skipped", notes)
@@ -77,8 +77,8 @@ func TestCELTermOnOwnField(t *testing.T) {
 // keep the last and drop the other while still reporting the rule as carried.
 func TestCELPresenceAndValueBothKept(t *testing.T) {
 	for _, order := range [][]parser.CELTerm{
-		{{Kind: parser.TermPresent, Path: []string{"label"}}, {Kind: parser.TermNonEmpty, Path: []string{"label"}}},
-		{{Kind: parser.TermNonEmpty, Path: []string{"label"}}, {Kind: parser.TermPresent, Path: []string{"label"}}},
+		{{Kind: parser.TermPresent, Path: []string{"label"}}, {Kind: parser.TermEmpty, Path: []string{"label"}}},
+		{{Kind: parser.TermEmpty, Path: []string{"label"}}, {Kind: parser.TermPresent, Path: []string{"label"}}},
 	} {
 		msg := parser.MessageMetadata{
 			Name:   "example.v1.User",
@@ -90,8 +90,8 @@ func TestCELPresenceAndValueBothKept(t *testing.T) {
 		tree, notes := c.buildCELTree(msg)
 
 		node := tree.children["label"]
-		if node == nil || !node.present || node.term != parser.TermNonEmpty {
-			t.Errorf("%v: node = %+v, want both present and a nonEmpty term", order, node)
+		if node == nil || !node.present || node.term != parser.TermEmpty {
+			t.Errorf("%v: node = %+v, want both present and an empty term", order, node)
 		}
 		if len(notes[0].Skipped) != 0 {
 			t.Errorf("%v: skipped %v, want nothing dropped", order, notes[0].Skipped)
@@ -105,12 +105,12 @@ func TestCELPresenceAndValueBothKept(t *testing.T) {
 func TestCELContradictoryTermsReported(t *testing.T) {
 	msg := parser.MessageMetadata{
 		Name:   "example.v1.User",
-		Fields: []parser.FieldMetadata{{Name: "slug", ProtoType: "string"}},
+		Fields: []parser.FieldMetadata{{Name: "slug", ProtoType: "string", Optional: true}},
 		CEL: []parser.CELRule{{
 			ID: "user.slug",
 			Terms: []parser.CELTerm{
+				{Kind: parser.TermAbsent, Path: []string{"slug"}, Source: `!has(this.slug)`},
 				{Kind: parser.TermEmpty, Path: []string{"slug"}, Source: `this.slug == ""`},
-				{Kind: parser.TermNonEmpty, Path: []string{"slug"}, Source: `this.slug != ""`},
 			},
 		}},
 	}
@@ -118,10 +118,10 @@ func TestCELContradictoryTermsReported(t *testing.T) {
 	c := &Context{messages: map[string]parser.MessageMetadata{msg.Name: msg}}
 	tree, notes := c.buildCELTree(msg)
 
-	if got := tree.children["slug"].term; got != parser.TermEmpty {
+	if got := tree.children["slug"].term; got != parser.TermAbsent {
 		t.Errorf("term = %q, want the first one kept", got)
 	}
-	if got := notes[0].Skipped; len(got) != 1 || got[0] != `this.slug != ""` {
+	if got := notes[0].Skipped; len(got) != 1 || got[0] != `this.slug == ""` {
 		t.Errorf("Skipped = %v, want the second term reported", got)
 	}
 }

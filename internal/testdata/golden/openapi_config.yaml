@@ -168,7 +168,7 @@ openapiOptions:
         format: "uuid"
     - field: shop.coverage.v1.AmbiguityCoverage.constructor
       option:
-        minLength: 1
+        format: "uuid"
     - field: shop.coverage.v1.AmbiguityCoverage.email
       option:
         format: "email"

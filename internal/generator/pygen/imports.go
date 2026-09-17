@@ -29,6 +29,11 @@ type pyImports struct {
 	abc     map[string]bool   // names from collections.abc
 
 	annotated map[string]bool // constructors from annotated_types
+
+	// Enums this file declares a `<Name>Strict` alias for, by the ProtoType the
+	// parser prints ("enum:shop.inventory.v1.StockMovementKind"). An enum from
+	// another file has no alias here; its fields keep the bare class.
+	enumStrict map[string]string
 }
 
 func newPyImports(self string) *pyImports {
@@ -39,7 +44,8 @@ func newPyImports(self string) *pyImports {
 		typing:  map[string]bool{},
 		abc:     map[string]bool{},
 
-		annotated: map[string]bool{},
+		annotated:  map[string]bool{},
+		enumStrict: map[string]string{},
 	}
 }
 
@@ -62,6 +68,9 @@ func (p *pyImports) typeOf(field parser.FieldMetadata) string {
 
 func (p *pyImports) base(protoType string, ref parser.TypeRef) string {
 	if ref.Name != "" {
+		if alias, ok := p.enumStrict[protoType]; ok {
+			return alias
+		}
 		if ref.File == p.self {
 			p.symbols[topLevel(ref.Name)] = true
 			return ref.Name

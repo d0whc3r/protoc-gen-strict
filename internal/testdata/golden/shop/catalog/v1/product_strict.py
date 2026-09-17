@@ -18,8 +18,18 @@ from typing import Annotated
 
 from annotated_types import Ge, MaxLen, MinLen
 
+from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
 from shop.common.v1 import common_pb2 as _shop_common_v1_common_pb2
 from shop.catalog.v1.product_pb2 import Product, ProductStatus
+
+# ProductStatus is the lifecycle state of a product.
+# Without PRODUCT_STATUS_UNSPECIFIED, the member protobuf numbers 0, which this overlay
+# reads as "unset" rather than a value. No buf.validate rule says so; the
+# convention that names it <ENUM>_UNSPECIFIED does.
+ProductStatusStrict = Annotated[
+    ProductStatus,
+    Ge(1),
+]
 
 # Product is the catalog resource.
 # cel[product.discount_below_price]: !has(this.discount_price) || this.discount_price.units < this.price.units
@@ -32,6 +42,7 @@ from shop.catalog.v1.product_pb2 import Product, ProductStatus
 #   calls: !_, _!=_, _||_
 ProductId = Annotated[
     str,
+    "google.api.field_behavior = OUTPUT_ONLY",
     "string.uuid = true",
 ]
 ProductSku = Annotated[
@@ -54,7 +65,7 @@ ProductPrice = Annotated[
     "required",
 ]
 ProductStatus_ = Annotated[
-    ProductStatus,
+    ProductStatusStrict,
     "enum.defined_only = true",
 ]
 ProductTags = Annotated[
@@ -71,15 +82,48 @@ ProductLabels = Annotated[
 ]
 ProductCreatedByEmail = Annotated[
     str,
+    "google.api.field_behavior = OUTPUT_ONLY",
     "cel[product.created_by_email]: this.size() == 0 || this.isEmail()",
     "  message: if set, created_by_email must be a valid email address",
     "  refs: this",
     "  calls: _==_, _||_, isEmail, size",
 ]
+ProductCreatedAt = Annotated[
+    _google_protobuf_timestamp_pb2.Timestamp,
+    "google.api.field_behavior = OUTPUT_ONLY",
+]
+ProductUpdatedAt = Annotated[
+    _google_protobuf_timestamp_pb2.Timestamp,
+    "google.api.field_behavior = OUTPUT_ONLY",
+]
+ProductPublishedAt = Annotated[
+    _google_protobuf_timestamp_pb2.Timestamp,
+    "google.api.field_behavior = OUTPUT_ONLY",
+]
 ProductVersion = Annotated[
     int,
+    "google.api.field_behavior = OUTPUT_ONLY",
     Ge(0),
 ]
+
+# Every field of shop.catalog.v1.Product the server assigns: those declared
+# (google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the
+# server owns the whole subtree. Dotted proto paths, so they can be subtracted from
+# a google.protobuf.FieldMask.
+ProductOutputOnlyFields = (
+    "id",
+    "created_by_email",
+    "created_at",
+    "created_at.seconds",
+    "created_at.nanos",
+    "updated_at",
+    "updated_at.seconds",
+    "updated_at.nanos",
+    "published_at",
+    "published_at.seconds",
+    "published_at.nanos",
+    "version",
+)
 
 # CreateProductRequest creates a new product.
 # cel[create_product.no_read_only_fields]: this.product.id == '' && !has(this.product.created_at) && !has(this.product.updated_at) && this.product.version == 0
@@ -95,7 +139,44 @@ CreateProductRequestIdempotencyKey = Annotated[
     "string.uuid = true",
 ]
 
+# Every field of shop.catalog.v1.CreateProductRequest the server assigns: those declared
+# (google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the
+# server owns the whole subtree. Dotted proto paths, so they can be subtracted from
+# a google.protobuf.FieldMask.
+CreateProductRequestOutputOnlyFields = (
+    "product.id",
+    "product.created_by_email",
+    "product.created_at",
+    "product.created_at.seconds",
+    "product.created_at.nanos",
+    "product.updated_at",
+    "product.updated_at.seconds",
+    "product.updated_at.nanos",
+    "product.published_at",
+    "product.published_at.seconds",
+    "product.published_at.nanos",
+    "product.version",
+)
+
 # CreateProductResponse returns the stored product.
+# Every field of shop.catalog.v1.CreateProductResponse the server assigns: those declared
+# (google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the
+# server owns the whole subtree. Dotted proto paths, so they can be subtracted from
+# a google.protobuf.FieldMask.
+CreateProductResponseOutputOnlyFields = (
+    "product.id",
+    "product.created_by_email",
+    "product.created_at",
+    "product.created_at.seconds",
+    "product.created_at.nanos",
+    "product.updated_at",
+    "product.updated_at.seconds",
+    "product.updated_at.nanos",
+    "product.published_at",
+    "product.published_at.seconds",
+    "product.published_at.nanos",
+    "product.version",
+)
 
 # GetProductRequest looks a product up by id or by SKU.
 # required oneof key: exactly one of id, sku
@@ -109,6 +190,24 @@ GetProductRequestSku = Annotated[
 ]
 
 # GetProductResponse returns a single product.
+# Every field of shop.catalog.v1.GetProductResponse the server assigns: those declared
+# (google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the
+# server owns the whole subtree. Dotted proto paths, so they can be subtracted from
+# a google.protobuf.FieldMask.
+GetProductResponseOutputOnlyFields = (
+    "product.id",
+    "product.created_by_email",
+    "product.created_at",
+    "product.created_at.seconds",
+    "product.created_at.nanos",
+    "product.updated_at",
+    "product.updated_at.seconds",
+    "product.updated_at.nanos",
+    "product.published_at",
+    "product.published_at.seconds",
+    "product.published_at.nanos",
+    "product.version",
+)
 
 # ListProductsRequest pages through the catalog.
 # cel[list_products.price_bounds]: has(this.min_price) == has(this.max_price)
@@ -120,7 +219,7 @@ ListProductsRequestPagination = Annotated[
     "required",
 ]
 ListProductsRequestStatuses = Annotated[
-    Sequence[ProductStatus],
+    Sequence[ProductStatusStrict],
     "repeated.items.enum.defined_only = true",
     "repeated.items.enum.not_in = [0]",
 ]
@@ -154,7 +253,44 @@ UpdateProductRequestProduct = Annotated[
     "required",
 ]
 
+# Every field of shop.catalog.v1.UpdateProductRequest the server assigns: those declared
+# (google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the
+# server owns the whole subtree. Dotted proto paths, so they can be subtracted from
+# a google.protobuf.FieldMask.
+UpdateProductRequestOutputOnlyFields = (
+    "product.id",
+    "product.created_by_email",
+    "product.created_at",
+    "product.created_at.seconds",
+    "product.created_at.nanos",
+    "product.updated_at",
+    "product.updated_at.seconds",
+    "product.updated_at.nanos",
+    "product.published_at",
+    "product.published_at.seconds",
+    "product.published_at.nanos",
+    "product.version",
+)
+
 # UpdateProductResponse returns the stored product.
+# Every field of shop.catalog.v1.UpdateProductResponse the server assigns: those declared
+# (google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the
+# server owns the whole subtree. Dotted proto paths, so they can be subtracted from
+# a google.protobuf.FieldMask.
+UpdateProductResponseOutputOnlyFields = (
+    "product.id",
+    "product.created_by_email",
+    "product.created_at",
+    "product.created_at.seconds",
+    "product.created_at.nanos",
+    "product.updated_at",
+    "product.updated_at.seconds",
+    "product.updated_at.nanos",
+    "product.published_at",
+    "product.published_at.seconds",
+    "product.published_at.nanos",
+    "product.version",
+)
 
 # DeleteProductRequest removes a product.
 DeleteProductRequestId = Annotated[

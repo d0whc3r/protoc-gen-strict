@@ -23,6 +23,15 @@ from google.protobuf import duration_pb2 as _google_protobuf_duration_pb2
 from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
 from shop.coverage.v1.rules_pb2 import Flavor, NumericRuleCoverage, StringRuleCoverage
 
+# Flavor exercises the enum rule family.
+# Without FLAVOR_UNSPECIFIED, the member protobuf numbers 0, which this overlay
+# reads as "unset" rather than a value. No buf.validate rule says so; the
+# convention that names it <ENUM>_UNSPECIFIED does.
+FlavorStrict = Annotated[
+    Flavor,
+    Ge(1),
+]
+
 # StringRuleCoverage exercises the string rule family, including the well-known format rules that live in a oneof inside StringRules.
 StringRuleCoverageExactLen = Annotated[
     str,
@@ -191,16 +200,16 @@ ScalarRuleCoverageRemoteIp = Annotated[
     "bytes.ip = true",
 ]
 ScalarRuleCoverageDefined = Annotated[
-    Flavor,
+    FlavorStrict,
     "enum.defined_only = true",
 ]
 ScalarRuleCoverageSubset = Annotated[
-    Flavor,
+    FlavorStrict,
     "enum.defined_only = true",
     "enum.in = [1, 2]",
 ]
 ScalarRuleCoveragePinned = Annotated[
-    Flavor,
+    FlavorStrict,
     "enum.const = 3",
 ]
 
@@ -244,7 +253,7 @@ CollectionRuleCoverageNames = Annotated[
     "repeated.unique = true",
 ]
 CollectionRuleCoverageFlavors = Annotated[
-    Sequence[Flavor],
+    Sequence[FlavorStrict],
     "repeated.items.enum.defined_only = true",
     "repeated.items.enum.not_in = [0]",
 ]
@@ -384,7 +393,7 @@ AmbiguityCoverageUserId = Annotated[
 ]
 AmbiguityCoverageConstructor = Annotated[
     str,
-    MinLen(1),
+    "string.uuid = true",
 ]
 AmbiguityCoverageEmail = Annotated[
     str,

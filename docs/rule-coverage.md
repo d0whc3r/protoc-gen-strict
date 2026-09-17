@@ -26,6 +26,13 @@ is how much of that its output can hold.
 protovalidate still validates everything at runtime, whatever the target. The
 overlay moves what it can to the compiler; it does not replace the validator.
 
+One annotation outside `buf.validate` is carried too:
+`(google.api.field_behavior) = OUTPUT_ONLY` becomes a `readonly` property in
+TypeScript and metadata text in Python, plus a `<Message>OutputOnlyFields` list
+of dotted proto paths in both — the subtree under a server-assigned message
+field included — for the code that has to subtract them from an update mask. The OpenAPI target leaves it alone,
+since protoc-gen-openapiv2 already reads it.
+
 ## Per target
 
 | | TypeScript | Python | OpenAPI |
@@ -33,7 +40,7 @@ overlay moves what it can to the compiler; it does not replace the validator.
 | Output | `<file>.strict.ts` | `<file>_strict.py` | `openapi_config.yaml`, one per run |
 | Layered on | protoc-gen-es | protoc-gen-python, protoc-gen-pyi | protoc-gen-openapiv2, in a second pass |
 | What it emits | `<Message>Strict`, the generated type with its constrained fields narrowed | one `typing.Annotated` alias per constrained field | a JSONSchema per constrained field, keyed by fully qualified name |
-| Rules it carries | those with a structural equivalent: brands, `Extract`/`Exclude`, non-empty tuples, required keys | those `annotated_types` spells: lengths and numeric bounds. The type itself stays what protoc-gen-pyi declared | those with a JSONSchema keyword, bound included |
+| Rules it carries | those with a structural equivalent: string shape types, `Extract`/`Exclude`, non-empty tuples, required keys | those `annotated_types` spells: lengths and numeric bounds. The type itself stays what protoc-gen-pyi declared | those with a JSONSchema keyword, bound included |
 | Every other rule | named in the JSDoc, under "Left to runtime validation" | metadata on the alias, alongside the carried ones | dropped silently; a swagger has no comment to name it in |
 | Which rules, exactly | [TypeScript](rule-coverage-typescript.md) | [Python](rule-coverage-python.md) | [OpenAPI](rule-coverage-openapi.md) |
 

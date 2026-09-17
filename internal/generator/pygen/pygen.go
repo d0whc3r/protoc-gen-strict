@@ -5,6 +5,7 @@ package pygen
 
 import (
 	"maps"
+	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
@@ -12,6 +13,28 @@ import (
 	"github.com/d0whc3r/protoc-gen-strict/internal/generator/emit"
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
+
+// outputOnlyFieldsSuffix names the tuple listing a message's server-assigned
+// fields, kept apart from the aliases so it can be read at runtime.
+const outputOnlyFieldsSuffix = "OutputOnlyFields"
+
+// pyBlock is one message's or enum's aliases, under the comment that
+// introduces them.
+type pyBlock struct {
+	doc     []string
+	aliases []pyAlias
+
+	// The server-assigned field paths, as the tuple that follows the aliases.
+	// Empty when nothing the message reaches is server-assigned.
+	outputOnly pyConst
+}
+
+// pyConst is one `Name = ("a", "b")` binding: a value, not an alias.
+type pyConst struct {
+	name   string
+	doc    []string
+	values []string
+}
 
 // pyAlias is one `Name = Annotated[T, MinLen(3), "rule", ...]` binding.
 type pyAlias struct {
@@ -26,21 +49,22 @@ type pyAlias struct {
 // no structural type to intersect with. It can name each constrained field, so
 // the rules show at the call site: `def promote(user_id: UserId)` instead of
 // `user_id: str`.
-func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.MessageMetadata) {
+func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.MessageMetadata, enums []parser.EnumMetadata) {
 	pkgPrefix := string(file.Desc.Package()) + "."
 	imports := newPyImports(file.Desc.Path())
 
+	// The enum aliases are resolved first: an enum field of a type declared in
+	// this file is annotated with the alias rather than the bare class, so the
+	// alias has to exist before the field walk reaches it.
+	enumBlocks := imports.enumAliases(enums)
+
 	// Resolving types populates the import set, so it runs before the header.
-	type block struct {
-		doc     []string
-		aliases []pyAlias
-	}
-	blocks := make([]block, 0, len(messages))
+	blocks := make([]pyBlock, 0, len(messages))
 	for _, msg := range messages {
 		relative := strings.TrimPrefix(msg.Name, pkgPrefix)
 		owner := strings.ReplaceAll(relative, ".", "")
 
-		b := block{doc: pyMessageDoc(msg)}
+		b := pyBlock{doc: pyMessageDoc(msg), outputOnly: outputOnlyConst(msg, owner)}
 		for _, field := range msg.Fields {
 			metadata := imports.metadataOf(field)
 			if len(metadata) == 0 {
@@ -59,10 +83,18 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 	// yields the alias `UserId`, and its own type is imported under that name.
 	// The alias is the one renamed, since the class name is
 	// protoc-gen-python's. Resolved after the walk, once every import is known.
+	// An enum alias is named in the fields it annotates, so it holds its name
+	// and a field alias is what gets renamed around it.
 	taken := maps.Clone(imports.symbols)
+	for _, b := range enumBlocks {
+		taken[b.aliases[0].name] = true
+	}
 	for i := range blocks {
 		for j := range blocks[i].aliases {
 			blocks[i].aliases[j].name = uniqueName(taken, blocks[i].aliases[j].name)
+		}
+		if blocks[i].outputOnly.name != "" {
+			blocks[i].outputOnly.name = uniqueName(taken, blocks[i].outputOnly.name)
 		}
 	}
 
@@ -87,11 +119,11 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 	}
 	g.P()
 
-	for _, b := range blocks {
+	for _, b := range append(enumBlocks, blocks...) {
 		for _, line := range emit.CommentLines(b.doc) {
 			g.P("# ", line)
 		}
-		if len(b.aliases) == 0 {
+		if len(b.aliases) == 0 && b.outputOnly.name == "" {
 			if len(b.doc) > 0 {
 				g.P()
 			}
@@ -105,7 +137,40 @@ func WriteFile(gen *protogen.Plugin, file *protogen.File, messages []parser.Mess
 			}
 			g.P("]")
 		}
+		if b.outputOnly.name != "" {
+			if len(b.aliases) > 0 {
+				g.P()
+			}
+			for _, line := range emit.CommentLines(b.outputOnly.doc) {
+				g.P("# ", line)
+			}
+			g.P(b.outputOnly.name, " = (")
+			for _, value := range b.outputOnly.values {
+				g.P("    ", strconv.Quote(value), ",")
+			}
+			g.P(")")
+		}
 		g.P()
+	}
+}
+
+// outputOnlyConst lists the fields the server assigns, in declaration order and
+// as dotted proto paths — what a google.protobuf.FieldMask carries, so an
+// update mask can leave them out. The zero value means nothing the message
+// reaches is server-assigned.
+func outputOnlyConst(msg parser.MessageMetadata, owner string) pyConst {
+	if len(msg.OutputOnlyPaths) == 0 {
+		return pyConst{}
+	}
+	return pyConst{
+		name: owner + outputOnlyFieldsSuffix,
+		doc: []string{
+			"Every field of " + msg.Name + " the server assigns: those declared",
+			"(google.api.field_behavior) = OUTPUT_ONLY and everything under one, since the",
+			"server owns the whole subtree. Dotted proto paths, so they can be subtracted from",
+			"a google.protobuf.FieldMask.",
+		},
+		values: msg.OutputOnlyPaths,
 	}
 }
 

@@ -15,6 +15,10 @@ import (
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
 
+// outputOnlyFieldsSuffix names the const listing a message's server-assigned
+// fields, kept apart from the type so it can be read at runtime.
+const outputOnlyFieldsSuffix = "OutputOnlyFields"
+
 // tsProp is one property of the object `Narrow` applies to the generated type.
 type tsProp struct {
 	key string
@@ -32,10 +36,18 @@ func Write(gen *protogen.Plugin, file *protogen.File, ctx *Context) {
 
 	// Every name this file declares is reserved first, so an import of a
 	// same-named symbol from another package is the one that gets renamed.
+	for _, enum := range ctx.enumsByFile[f.proto] {
+		if ctx.strictEnums[enum.Name] {
+			f.declare(ctx.strictName(enum.Name))
+		}
+	}
 	for _, msg := range ctx.byFile[f.proto] {
 		f.declare(ctx.strictName(msg.Name))
-		if ctx.strictSchemas[msg.Name] {
+		if ctx.needsStrict[msg.Name] {
 			f.declare(ctx.tsName(msg.Name) + "StrictSchema")
+		}
+		if len(msg.OutputOnlyPaths) > 0 {
+			f.declare(ctx.tsName(msg.Name) + outputOnlyFieldsSuffix)
 		}
 	}
 	for _, service := range file.Services {
@@ -43,11 +55,17 @@ func Write(gen *protogen.Plugin, file *protogen.File, ctx *Context) {
 		f.declare(string(service.Desc.Name()) + "StrictDescriptor")
 	}
 
-	for _, msg := range ctx.byFile[f.proto] {
-		f.message(msg)
+	for _, enum := range ctx.enumsByFile[f.proto] {
+		if ctx.strictEnums[enum.Name] {
+			f.enumType(enum)
+		}
 	}
 	for _, msg := range ctx.byFile[f.proto] {
-		if ctx.strictSchemas[msg.Name] {
+		f.message(msg)
+		f.outputOnlyFields(msg)
+	}
+	for _, msg := range ctx.byFile[f.proto] {
+		if ctx.needsStrict[msg.Name] {
 			f.strictSchema(msg)
 		}
 	}
@@ -68,12 +86,36 @@ func Write(gen *protogen.Plugin, file *protogen.File, ctx *Context) {
 	}
 }
 
+// enumType emits `<Name>Strict`, the generated enum without the member
+// protobuf numbers 0. Every field of the enum's type takes this alias, so a
+// message never carries the "unset" member — no buf.validate rule says so, the
+// convention that names it <ENUM>_UNSPECIFIED does.
+func (f *tsFile) enumType(enum parser.EnumMetadata) {
+	zero, ok := enum.Zero()
+	if !ok {
+		return
+	}
+	name := f.shape(f.ctx.tsName(enum.Name))
+	strict := f.declare(f.ctx.strictName(enum.Name))
+	var doc []string
+	if enum.Comments != "" {
+		doc = append(doc, emit.OneLine(enum.Comments), "")
+	}
+	f.doc("", append(doc,
+		"Without "+zero.Name+", the member protobuf numbers 0, which this overlay",
+		"reads as \"unset\" rather than a value. No buf.validate rule says so; the",
+		"convention that names it <ENUM>_UNSPECIFIED does.",
+	))
+	f.P("export type ", strict, " = Exclude<", name, ", 0>;")
+	f.P()
+}
+
 // message emits `<Name>Strict`.
 func (f *tsFile) message(msg parser.MessageMetadata) {
 	name := f.shape(f.ctx.tsName(msg.Name))
 	strict := f.declare(f.ctx.strictName(msg.Name))
 	var props []tsProp
-	var required []string
+	var required, readOnly []string
 	var runtimeOnly []emit.RuntimeNote
 
 	tree := f.ctx.celTrees[msg.Name]
@@ -104,26 +146,60 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 		if n.Required || (node != nil && node.present) {
 			required = append(required, localName(field.Name))
 		}
+		// OUTPUT_ONLY is not a buf.validate rule and narrows no value: the
+		// server assigns the field, so the property is readonly rather than
+		// retyped.
+		if field.OutputOnly {
+			readOnly = append(readOnly, localName(field.Name))
+		}
+	}
+
+	// The wrappers, innermost first: Require<Immutable<Narrow<T, {...}>>>.
+	before, after := "", ""
+	if len(readOnly) > 0 {
+		before, after = f.helper("Immutable")+"<", ", "+quotedUnion(readOnly)+">"
+	}
+	if len(required) > 0 {
+		before, after = f.helper("Require")+"<"+before, after+", "+quotedUnion(required)+">"
 	}
 
 	f.doc("", f.messageDoc(msg, runtimeOnly))
-	switch {
-	case len(props) == 0 && len(required) == 0:
-		f.P("export type ", strict, " = ", name, ";")
-	case len(props) == 0:
-		f.P("export type ", strict, " = ", f.helper("Require"), "<", name, ", ", quotedUnion(required), ">;")
-	default:
-		before, after := "", ""
-		if len(required) > 0 {
-			before, after = f.helper("Require")+"<", ", "+quotedUnion(required)+">"
-		}
-		f.P("export type ", strict, " = ", before, f.helper("Narrow"), "<", name, ", {")
-		for _, prop := range props {
-			f.doc("  ", prop.doc)
-			f.P("  ", prop.key, ": ", prop.typ, ";")
-		}
-		f.P("}>", after, ";")
+	if len(props) == 0 {
+		f.P("export type ", strict, " = ", before, name, after, ";")
+		f.P()
+		return
 	}
+	f.P("export type ", strict, " = ", before, f.helper("Narrow"), "<", name, ", {")
+	for _, prop := range props {
+		f.doc("  ", prop.doc)
+		f.P("  ", prop.key, ": ", prop.typ, ";")
+	}
+	f.P("}>", after, ";")
+	f.P()
+}
+
+// outputOnlyFields emits `<Name>OutputOnlyFields`, the dotted proto paths of
+// the fields the server assigns. The readonly properties say the same thing to
+// the compiler, but only about this message's own fields; a caller that has to
+// name a field — a google.protobuf.FieldMask, a form, a diff — needs the paths
+// as values, nested ones included, and in the form a FieldMask carries them,
+// which is the proto name rather than the camelCase property.
+func (f *tsFile) outputOnlyFields(msg parser.MessageMetadata) {
+	if len(msg.OutputOnlyPaths) == 0 {
+		return
+	}
+	f.doc("", []string{
+		"Every field of " + msg.Name + " the server assigns: those declared",
+		"`(google.api.field_behavior) = OUTPUT_ONLY` and everything under one, since the",
+		"server owns the whole subtree. Dotted proto paths, so they can be subtracted from",
+		"a google.protobuf.FieldMask; the ones at the top level are readonly in " +
+			f.ctx.strictName(msg.Name) + ".",
+	})
+	f.P("export const ", f.declare(f.ctx.tsName(msg.Name)+outputOnlyFieldsSuffix), " = [")
+	for _, path := range msg.OutputOnlyPaths {
+		f.P("  ", strconv.Quote(path), ",")
+	}
+	f.P("] as const;")
 	f.P()
 }
 
@@ -133,6 +209,14 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 // this plugin knowing any of them.
 func (f *tsFile) narrowedType(owner string, field parser.FieldMetadata, n narrowing) string {
 	indexed := indexedProp(owner, localName(field.Name))
+
+	// An enum field narrows off its enum's strict alias rather than off the
+	// generated property, so an enum rule stacks on top of the excluded zero.
+	base := indexed
+	if n.Enum != "" {
+		base = f.strictRef(n.Enum)
+	}
+
 	switch {
 	case n.Target != "":
 		typ := f.strictRef(n.Target)
@@ -152,9 +236,17 @@ func (f *tsFile) narrowedType(owner string, field parser.FieldMetadata, n narrow
 		}
 		return strings.Join(brands, " & ")
 	case n.Extract != "":
-		return "Extract<" + indexed + ", " + n.Extract + ">"
+		return "Extract<" + base + ", " + n.Extract + ">"
 	case n.Exclude != "":
-		return "Exclude<" + indexed + ", " + n.Exclude + ">"
+		return "Exclude<" + base + ", " + n.Exclude + ">"
+	case n.Enum != "":
+		if field.Repeated {
+			base += "[]"
+			if n.List {
+				base = f.helper("NonEmptyList") + "<" + base + ">"
+			}
+		}
+		return base
 	case n.List:
 		return f.helper("NonEmptyList") + "<" + indexed + ">"
 	case n.Required:
@@ -165,8 +257,7 @@ func (f *tsFile) narrowedType(owner string, field parser.FieldMetadata, n narrow
 }
 
 // applyCEL layers a message CEL rule's narrowing on top of what the field's own
-// rules produced: a `string.uuid` field a rule also requires non-empty narrows
-// to `Uuid & NonEmpty` rather than losing one of the two.
+// rules produced, so neither of the two is lost.
 func (f *tsFile) applyCEL(owner string, field parser.FieldMetadata, node *celNode, base string) string {
 	if node == nil {
 		return base
@@ -211,8 +302,6 @@ func (f *tsFile) applyCEL(owner string, field parser.FieldMetadata, node *celNod
 		return base + ` & ""`
 	case parser.TermZero:
 		return "Extract<" + base + ", 0>"
-	case parser.TermNonEmpty:
-		return base + " & " + f.helper("NonEmpty")
 	default:
 		if base == indexed {
 			return "" // nothing narrowed the value; only the optionality moves

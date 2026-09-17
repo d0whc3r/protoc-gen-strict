@@ -22,6 +22,15 @@ from google.protobuf import duration_pb2 as _google_protobuf_duration_pb2
 from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
 from shop.inventory.v1.warehouse_pb2 import ContactPoint, OpeningHours, StockMovementKind, Warehouse
 
+# StockMovementKind classifies a change in stock level.
+# Without STOCK_MOVEMENT_KIND_UNSPECIFIED, the member protobuf numbers 0, which this overlay
+# reads as "unset" rather than a value. No buf.validate rule says so; the
+# convention that names it <ENUM>_UNSPECIFIED does.
+StockMovementKindStrict = Annotated[
+    StockMovementKind,
+    Ge(1),
+]
+
 # Warehouse is a physical stocking location.
 WarehouseId = Annotated[
     str,
@@ -131,7 +140,7 @@ StockMovementProductId = Annotated[
     "string.uuid = true",
 ]
 StockMovementKind_ = Annotated[
-    StockMovementKind,
+    StockMovementKindStrict,
     "enum.defined_only = true",
     "enum.not_in = [0]",
 ]

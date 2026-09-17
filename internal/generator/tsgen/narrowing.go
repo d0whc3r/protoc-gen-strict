@@ -16,9 +16,10 @@ const ignoreAlways = "IGNORE_ALWAYS"
 // narrowing is what one field contributes to its message's strict type. The
 // zero value means the field is left exactly as protoc-gen-es declared it.
 type narrowing struct {
-	Brands   []string // nominal string types from strict/types, intersected
+	Brands   []string // string shape types from strict/types, intersected
 	Extract  string   // enum.in or enum.const, as a union of numeric literals
 	Exclude  string   // enum.not_in, likewise
+	Enum     string   // fq name of an enum-typed field whose strict alias applies
 	List     bool     // repeated.min_items of at least one
 	Required bool     // (buf.validate.field).required on a field declared `?:`
 	Target   string   // fq name of a message-typed field whose target narrows
@@ -30,7 +31,7 @@ type narrowing struct {
 
 func (n narrowing) isZero() bool {
 	return len(n.Brands) == 0 && n.Extract == "" && n.Exclude == "" &&
-		!n.List && !n.Required && n.Target == ""
+		n.Enum == "" && !n.List && !n.Required && n.Target == ""
 }
 
 // fieldNarrowing resolves everything but the message-typed target, which waits
@@ -49,36 +50,47 @@ func (c *Context) fieldNarrowing(field parser.FieldMetadata) narrowing {
 
 	// Brands describe one string; a rule under repeated.items describes the
 	// element, which this plugin does not narrow.
+	//
+	// string.min_len is not among them: a template literal type has no shape
+	// that excludes the empty string, and expressing it would take a nominal
+	// type no caller can produce without a constructor. Left to runtime.
 	if field.ProtoType == "string" && !field.Repeated {
 		if value, ok := emit.RuleValue(field, "string.uuid"); ok && value == "true" {
-			n.addBrand("Uuid")
+			n.Brands = append(n.Brands, "Uuid")
 			n.consumed["string.uuid"] = true
 		}
 		if value, ok := emit.RuleValue(field, "string.email"); ok && value == "true" {
-			n.addBrand("Email")
+			n.Brands = append(n.Brands, "Email")
 			n.consumed["string.email"] = true
-		}
-		// Only "at least one" has a type equivalent; the bound stays runtime.
-		if intRule(field, "string.min_len") >= 1 {
-			n.addBrand("NonEmpty")
-			n.consumed["string.min_len"] = true
 		}
 	}
 
 	// A numeric TS enum member is a subtype of its literal, and protovalidate
 	// stores these values as plain int32, so the union filters the generated
 	// enum without this plugin learning a member name.
-	if strings.HasPrefix(field.ProtoType, "enum:") && !field.Repeated {
-		for _, kind := range []string{"enum.const", "enum.in"} {
-			if members, ok := enumMembers(field, kind); ok {
-				n.Extract, n.consumed[kind] = members, true
-				break
+	if name, ok := strings.CutPrefix(field.ProtoType, "enum:"); ok {
+		if !field.Repeated {
+			for _, kind := range []string{"enum.const", "enum.in"} {
+				if members, ok := enumMembers(field, kind); ok {
+					n.Extract, n.consumed[kind] = members, true
+					break
+				}
+			}
+			if n.Extract == "" {
+				if members, ok := enumMembers(field, "enum.not_in"); ok {
+					n.Exclude, n.consumed["enum.not_in"] = members, true
+				}
 			}
 		}
-		if n.Extract == "" {
-			if members, ok := enumMembers(field, "enum.not_in"); ok {
-				n.Exclude, n.consumed["enum.not_in"] = members, true
-			}
+
+		// Every enum field also drops the member protobuf numbers 0, rule or no
+		// rule. That is a naming convention — buf lint's ENUM_ZERO_VALUE_SUFFIX
+		// calls it <ENUM>_UNSPECIFIED, "unset" rather than a value — so the
+		// enum's strict alias is the base an enum rule then narrows further.
+		// See docs/rule-coverage-typescript.md.
+		if c.strictEnums[name] {
+			n.Enum = name
+			n.Exclude = withoutZero(n.Exclude)
 		}
 	}
 
@@ -96,33 +108,17 @@ func (c *Context) fieldNarrowing(field parser.FieldMetadata) narrowing {
 			n.Required = true
 		case field.Repeated:
 			n.List = true
-		case field.ProtoType == "string":
-			n.addBrand("NonEmpty")
+		case n.Enum != "":
+			// The enum's strict alias already rules the zero member out.
 		case strings.HasPrefix(field.ProtoType, "enum:") && n.Extract == "" && n.Exclude == "":
 			n.Exclude = "0"
 		default:
-			// A numeric or bytes zero has no type to exclude it from, and a
-			// map's is an index signature. Left to runtime validation.
+			// A string, numeric or bytes zero has no type to exclude it from,
+			// and a map's is an index signature. Left to runtime validation.
 			delete(n.consumed, "required")
 		}
 	}
 	return n
-}
-
-// addBrand keeps the brand list free of duplicates and of redundancy: a Uuid or
-// an Email is never empty, so NonEmpty alongside one would only cost the caller
-// a second constructor.
-func (n *narrowing) addBrand(brand string) {
-	if slices.Contains(n.Brands, brand) {
-		return
-	}
-	if brand == "NonEmpty" && (slices.Contains(n.Brands, "Uuid") || slices.Contains(n.Brands, "Email")) {
-		return
-	}
-	if brand == "Uuid" || brand == "Email" {
-		n.Brands = slices.DeleteFunc(n.Brands, func(existing string) bool { return existing == "NonEmpty" })
-	}
-	n.Brands = append(n.Brands, brand)
 }
 
 // narrowingOf is fieldNarrowing plus the message-typed target, known only once
@@ -170,6 +166,17 @@ func enumMembers(field parser.FieldMetadata, kind string) (string, bool) {
 		}
 	}
 	return strings.Join(parts, " | "), true
+}
+
+// withoutZero drops the zero from a union of enum members. The enum's strict
+// alias already excludes it, so a rule naming it too would only repeat the
+// exclusion — and an enum.not_in of the zero alone would leave nothing to say.
+func withoutZero(members string) string {
+	if members == "" {
+		return ""
+	}
+	kept := slices.DeleteFunc(strings.Split(members, " | "), func(m string) bool { return m == "0" })
+	return strings.Join(kept, " | ")
 }
 
 // intRule reads a numeric rule such as string.min_len, returning 0 when it is
