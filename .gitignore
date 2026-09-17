@@ -1,0 +1,7 @@
+bin/
+gen/
+dist/
+internal/testdata/verify/gen/
+internal/testdata/verify/node_modules/
+internal/testdata/verify/venv/
+internal/testdata/verify/package-lock.json
