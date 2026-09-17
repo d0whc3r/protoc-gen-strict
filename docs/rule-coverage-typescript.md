@@ -82,13 +82,30 @@ Only conjunctions (`&&`) of these shapes, on paths rooted at `this`:
 |---|---|
 | `this.x == ''` | intersected with `""` |
 | `this.x != ''` | intersected with `NonEmpty` |
-| `!has(this.x)` | `never`; the field stays optional, so it can be omitted but not set |
-| `has(this.x)` | unchanged, but the field is lifted into `Require<..., "x">` |
 | `this.x == 0` on an enum | `Extract<..., 0>`, the zero-numbered member |
 | `this.x == 0` on anything else | Left to runtime: `0` is a number, a bigint or a duration depending on a choice protoc-gen-es made, not this plugin |
 
 Both argument orders are read, so `'' == this.id` translates like
 `this.id == ''`.
+
+`has()` reads differently per field, because CEL defines it that way. Where the
+field tracks presence — a message, a `oneof` member, an `optional` label — it
+asks whether the field was set. Everywhere else it is "not the default value",
+and says nothing about the property being there:
+
+| CEL | Field tracks presence | Field does not |
+|---|---|---|
+| `has(this.x)` | `NonNullable<M["x"]>`, and the field is lifted into `Require<..., "x">` | a `string` is intersected with `NonEmpty`; anything else is left to runtime |
+| `!has(this.x)` | `never`; the field stays optional, so it can be omitted but not set | a `string` is intersected with `""`, an enum becomes `Extract<..., 0>`; anything else is left to runtime |
+
+The `NonNullable` matters: `Require` drops the `?` but not an `undefined`
+written into the property type itself, which protoc-gen-es does emit.
+
+Presence and a value bound on one field are separate constraints and both hold:
+`has(this.nickname) && this.nickname != ''` narrows to
+`NonNullable<M["nickname"]> & NonEmpty` *and* lifts `nickname` into `Require`.
+Two conjuncts that both narrow the *value* of one field contradict each other;
+the first is carried and the second reported under "Left to runtime validation".
 
 A term **intersects** with what the field already had rather than replacing it.
 That keeps `Narrow`'s constraint satisfied by construction, and it says the truth
@@ -132,6 +149,10 @@ JSDoc. Pass that file to the plugin to carry it.
 A segment that is not a singular message ends the translation: a path reaching
 through a list or a map describes elements, which this plugin does not narrow.
 
+A segment naming a `oneof` member ends it too. protoc-gen-es declares the oneof
+as one discriminated-union property, so its members are not properties to
+narrow, and the conjunct is left to runtime validation.
+
 ## `oneof`
 
 A real `oneof` is a discriminated union in the protoc-gen-es output, with a
@@ -143,7 +164,9 @@ key: Exclude<GetProductRequest["key"], { case: undefined }>;
 ```
 
 Rules on the members cannot narrow an arm, so they are listed in the JSDoc of
-that property instead.
+that property instead. Without `required` the union stands as protoc-gen-es
+declared it and there is no property to document, so the member rules are listed
+under "Left to runtime validation" on the type itself.
 
 A `(buf.validate.message).oneof` rule names fields that are ordinary properties,
 with no union to constrain, so it is reported as left to runtime validation.
@@ -155,6 +178,11 @@ with no union to constrain, so it is reported as left to runtime validation.
   which leaves `min_len` and `min_items` saying nothing and turns the rest into a
   union with the zero. Rather than reason per rule, the whole field is left to
   runtime validation. Under-narrowing is the safe direction.
+
+  `IGNORE_ALWAYS` on a message field goes further: protovalidate stops recursing
+  into the message, so the field keeps the generated type rather than the
+  target's `<Name>Strict`. Requiring the strict type there would reject a value
+  the proto accepts.
 - **`const`, `in` and `not_in` on strings and numbers.** Only the enum forms are
   carried; the rest would need the rule values re-quoted out of their rendered
   form, which is fragile for little gain.

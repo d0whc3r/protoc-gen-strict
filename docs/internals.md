@@ -10,9 +10,9 @@ flowchart TD
     main["main.go<br>protogen.Options{}.Run(generator.Run)"]
     run["generator.Run<br>for each file marked Generate"]
     parse["parser.ParseFile<br>descriptors + buf.validate extensions<br>→ []MessageMetadata"]
-    ts["writeTypeScript"]
-    py["writePython"]
-    api["writeOpenAPIConfig<br>one file per run"]
+    ts["tsgen.Write"]
+    py["pygen.WriteFile"]
+    api["oapigen.WriteConfig<br>one file per run"]
     resp["files added to the response"]
     out["buf writes the files"]
 
@@ -49,22 +49,32 @@ running this plugin twice, once per language.
 |---|---|
 | `main` | Entrypoint. Declares proto3-optional support, delegates to `generator.Run`. |
 | `internal/parser` | Reads descriptors, extracts `buf.validate` rules, translates message CEL, produces the IR. |
-| `internal/generator` | Turns the IR into TypeScript and Python overlay source, and into the OpenAPI field options. |
+| `internal/generator` | Parses the files marked for generation, then hands them to one emitter per target. |
 
-Inside `internal/generator`:
+One package per target, so a target's decisions cannot leak into another:
+
+| Package | Job |
+|---|---|
+| `generator` | `run.go` parses and dispatches; `options.go` holds `lang`, which picks the targets |
+| `generator/emit` | What every emitter shares and none owns: rule comments, rule lookup, identifier casing |
+| `generator/tsgen` | The TypeScript overlay |
+| `generator/pygen` | The Python overlay: the `Annotated` aliases |
+| `generator/oapigen` | `openapi_config.yaml`, the protoc-gen-openapiv2 field options |
+
+Inside `generator/tsgen`:
 
 | File | Job |
 |---|---|
-| `options.go` | The plugin's own parameters: `lang`, which picks the overlay to emit |
 | `context.go` | One resolution pass over every message: which narrow, which reach one, which need a retyped schema |
 | `celtree.go` | The CEL terms of a message, folded into a tree keyed by field |
-| `typescript.go` | `<Message>Strict` and the import bookkeeping for one file |
+| `narrowing.go` | What one field's rules contribute to its message's strict type |
+| `message.go` | `<Message>Strict`, and the entrypoint that writes one file |
+| `file.go` | The import bookkeeping and the local-name table for one file |
 | `schema.go` | `<Message>StrictSchema` and `<Service>Strict` |
-| `strict_types.go` | The shared `strict/types.ts` module, emitted once |
-| `python.go` | The `Annotated` aliases |
-| `openapi.go` | `openapi_config.yaml`, the protoc-gen-openapiv2 field options |
+| `runtime.go` | The shared `strict/types.ts` module, emitted once |
+| `names.go` | The identifiers protoc-gen-es declares |
 
-The boundary between the last two is deliberate. The parser knows protobuf and
+The boundary between parser and generator is deliberate. The parser knows protobuf and
 protovalidate; each generator knows one target and none of them knows the others.
 A generator that reached for a descriptor would have to learn the whole
 extension protocol, and the next target would learn it again.
@@ -84,7 +94,6 @@ type MessageMetadata struct {
 
 type FieldMetadata struct {
     Name       string  // proto name:  "user_id"
-    JSONName   string  // camelCase:   "userId"
     ProtoType  string  // "string", "message:example.v1.Address", "enum:...", "map<string, int32>"
     Type       TypeRef // where that message or enum is declared
     Repeated   bool
@@ -233,7 +242,7 @@ argument in full, along with the table of what each rule turns into.
 `context.go` runs once over every message the plugin was asked to generate, not
 only the ones in the file being printed. A message needs a strict type if it has
 a rule of its own *or* reaches one through a message-typed field. Marking one
-message can make the message that points at it qualify, so `buildContext`
+message can make the message that points at it qualify, so `tsgen.New`
 re-scans them all until a round marks none.
 
 This is why `buf.gen.yaml` has to set `strategy: all`. Under the default
@@ -289,7 +298,7 @@ rules. TypeScript rules out illegal states; Python only labels them. See
 [Rule coverage: Python](rule-coverage-python.md).
 
 The OpenAPI target narrows nothing either, but for the opposite reason: there is
-no type to narrow, only a JSONSchema to attach. `openapi.go` maps each rule to
+no type to narrow, only a JSONSchema to attach. `oapigen` maps each rule to
 its keywords and drops the rest, since a swagger has nowhere to name what it
 left out. See [Rule coverage: OpenAPI](rule-coverage-openapi.md).
 
@@ -299,10 +308,10 @@ An overlay generator takes the resolved context and one file, and writes one
 file:
 
 ```go
-func writeTypeScript(gen *protogen.Plugin, file *protogen.File, ctx *Context)
+func tsgen.Write(gen *protogen.Plugin, file *protogen.File, ctx *tsgen.Context)
 ```
 
-`writeOpenAPIConfig` is the exception. Its keys are fully qualified names, so
+`oapigen.WriteConfig` is the exception. Its keys are fully qualified names, so
 `Run` collects the messages of every file and writes a single
 `openapi_config.yaml` at the end, next to `strict/types.ts`.
 
@@ -316,16 +325,21 @@ order. Every reference goes through a method that records the import as a side
 effect (`shape`, `value`, `helper`, `strictRef`, `schemaRef`), so there is no
 second place where an import can be forgotten.
 
-The two overlay generators share the parts that are not language-specific:
+`generator/emit` holds the parts that are not language-specific:
 
-- `ruleComments(field)`: renders a field's constraints as plain lines.
-- `celComments(rules)`: renders CEL rules with their `refs` and `calls`.
-- `messageComments(msg)` / `oneofLine(oneof)`: oneof exclusivity and message-level CEL.
+- `emit.RuleComments(field)`: renders a field's constraints as plain lines.
+- `emit.MessageComments(msg)` / `emit.OneofLine(oneof)`: oneof exclusivity and message-level CEL.
+- `emit.RuleValue(field, kind)`: reads one rule off a field.
+- `emit.Camel` / `emit.Pascal`: the casing the official generators chose.
 
 Each generator supplies only its own comment syntax, its import convention, and
-its naming convention (`JSONName` for TypeScript, `Name` for Python).
+its naming convention: the IR carries the proto name, and every generator derives
+the identifier its target declares (`tsgen`'s `localName` mirrors protobuf-es,
+`emit.Pascal` is the alias fragment for Python).
 
-To add a target, write one more function in `internal/generator`, accept its
+A symbol only one target uses belongs in that target's package, not in `emit`.
+
+To add a target, write one more package under `internal/generator`, accept its
 `lang` value in `Options.Set`, and call it from `Run`. If it needs something the
 IR does not carry, extend the IR, then teach the existing generators to emit it
 too, or the new target silently enforces more than the others.
@@ -334,9 +348,9 @@ too, or the new target silently enforces more than the others.
 
 The unit tests pin the cases a golden diff would only show as noise:
 `parser/cel_test.go` the AST walk and the nil-safety path, `parser/celtype_test.go`
-the CEL shapes that translate and the ones that must not, `generator/celtree_test.go`
-a path reaching into a message this run never parsed, `generator/python_test.go` a
-proto at the import root, `generator/tsfile_test.go` a declaration with no comment.
+the CEL shapes that translate and the ones that must not, `generator/tsgen/celtree_test.go`
+a path reaching into a message this run never parsed, `generator/pygen/imports_test.go` a
+proto at the import root, `generator/tsgen/file_test.go` a declaration with no comment.
 
 `internal/generator/golden_test.go` is the main safety net. It feeds a committed
 descriptor set (`internal/testdata/descriptors.binpb`, built by `make testdata`)

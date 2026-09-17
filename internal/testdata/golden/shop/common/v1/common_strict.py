@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
 from shop.common.v1.common_pb2 import (
     Currency as Currency,
     LabelSet as LabelSet,
@@ -64,7 +64,7 @@ PaginationPageToken = Annotated[
 #   refs: end, start, this
 #   calls: !_, _<_, _||_
 TimeRangeStart = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "required",
 ]
 

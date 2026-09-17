@@ -10,10 +10,14 @@ protoc-gen-openapiv2. Rules that have an equivalent in the target become part of
 its output; the rest are named in the generated doc comment.
 
 ```
-main.go              plugin entrypoint, protogen.Options{}.Run
-internal/parser      descriptors + buf.validate extensions → MessageMetadata (IR)
-internal/generator   IR → TypeScript / Python overlay source, OpenAPI config
-proto/               fixture protos; `internal/testdata` holds the golden output
+main.go                       plugin entrypoint, protogen.Options{}.Run
+internal/parser               descriptors + buf.validate extensions → MessageMetadata (IR)
+internal/generator            parses, then dispatches to one emitter per target
+internal/generator/emit       what every emitter shares: rule comments, rule lookup, casing
+internal/generator/tsgen      IR → TypeScript overlay, plus the shared strict/types.ts
+internal/generator/pygen      IR → Python overlay
+internal/generator/oapigen    IR → openapi_config.yaml
+proto/                        fixture protos; `internal/testdata` holds the golden output
 ```
 
 **Never re-declare a proto type.** The official generator already decided how

@@ -75,7 +75,13 @@ Unlike the TypeScript overlay, the exact bound survives. `min_len: 3` is
   the rule is not carried at all.
 - **Every rule on a field with `ignore` set,** the same call the TypeScript
   overlay makes: the rules do not always apply, so none of them describes the
-  schema.
+  schema. `repeated.items.ignore` says the same of the element rules, and only of
+  those: the list's own `min_items` still holds.
+- **A reversed numeric range.** protovalidate reads a lower bound above the upper
+  one as a disjunction — `{gt: 20, lt: 10}` admits everything outside 10..20 —
+  and a `minimum` next to a `maximum` can only say "and". Written out as they
+  stand, the pair would reject every value the proto allows, so both bounds are
+  left to runtime validation.
 
 Nothing is reported for what it drops. A swagger has no comment to name a rule
 in, which is what makes [Rule coverage: TypeScript](rule-coverage-typescript.md)

@@ -114,7 +114,7 @@ export type ContactPointStrict = Narrow<ContactPoint, {
  * Left to runtime validation, having no type equivalent:
  *   cel[stock_movement.quantity_sign]
  *     this.kind == 2 && this.quantity_delta < 0 || this.kind == 1 && this.quantity_delta > 0 ||
-this.kind == 3
+ * this.kind == 3
  *     message: outbound movements require a negative quantity, inbound a positive one
  *   quantity_delta
  *     sint32.gte = -100000

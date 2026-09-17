@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Annotated
 
-from shop.common.v1 import common_pb2 as _common_pb2
+from shop.common.v1 import common_pb2 as _shop_common_v1_common_pb2
 from shop.catalog.v1.product_pb2 import (
     CreateProductRequest as CreateProductRequest,
     CreateProductResponse as CreateProductResponse,
@@ -56,7 +56,7 @@ ProductDescription = Annotated[
     "string.max_len = 4096",
 ]
 ProductPrice = Annotated[
-    _common_pb2.Money,
+    _shop_common_v1_common_pb2.Money,
     "required",
 ]
 ProductStatus = Annotated[
@@ -122,7 +122,7 @@ GetProductRequestSku = Annotated[
 #   refs: max_price, min_price, this
 #   calls: _==_
 ListProductsRequestPagination = Annotated[
-    _common_pb2.Pagination,
+    _shop_common_v1_common_pb2.Pagination,
     "required",
 ]
 ListProductsRequestStatuses = Annotated[
@@ -140,7 +140,7 @@ ListProductsRequestOrderBy = Annotated[
     "string.in = [, name, sku, created_at, price]",
 ]
 ListProductsRequestOrderDirection = Annotated[
-    _common_pb2.SortDirection,
+    _shop_common_v1_common_pb2.SortDirection,
     "enum.defined_only = true",
 ]
 

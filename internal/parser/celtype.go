@@ -59,14 +59,14 @@ func translateCEL(root protoreflect.MessageDescriptor, expr celast.Expr, info *c
 func matchTerm(root protoreflect.MessageDescriptor, expr celast.Expr) (CELTerm, bool) {
 	// `!has(this.x)`: a negated test-only select.
 	if args, ok := callArgs(expr, operators.LogicalNot, 1); ok {
-		if path, ok := testOnlyPath(root, args[0]); ok {
-			return CELTerm{Path: path, Kind: TermAbsent}, true
+		if path, leaf, ok := testOnlyPath(root, args[0]); ok {
+			return presenceTerm(path, leaf, unset)
 		}
 		return CELTerm{}, false
 	}
 	// `has(this.x)`.
-	if path, ok := testOnlyPath(root, expr); ok {
-		return CELTerm{Path: path, Kind: TermPresent}, true
+	if path, leaf, ok := testOnlyPath(root, expr); ok {
+		return presenceTerm(path, leaf, set)
 	}
 
 	// A comparison against a literal, in either argument order.
@@ -118,13 +118,55 @@ func comparison(root protoreflect.MessageDescriptor, args []celast.Expr) ([]stri
 }
 
 // testOnlyPath resolves the operand of `has(...)`, which cel-go parses into a
-// select marked test-only.
-func testOnlyPath(root protoreflect.MessageDescriptor, expr celast.Expr) ([]string, bool) {
+// select marked test-only, and returns the field its last segment names.
+func testOnlyPath(root protoreflect.MessageDescriptor, expr celast.Expr) ([]string, protoreflect.FieldDescriptor, bool) {
 	if expr.Kind() != celast.SelectKind || !expr.AsSelect().IsTestOnly() {
-		return nil, false
+		return nil, nil, false
 	}
-	path, _, ok := selectPath(root, expr)
-	return path, ok
+	return selectPath(root, expr)
+}
+
+// presence is which side of `has(...)` a conjunct asserts.
+type presence int
+
+const (
+	set presence = iota
+	unset
+)
+
+// presenceTerm maps `has(this.x)` onto the narrowing it implies, which depends
+// on whether the field tracks presence.
+//
+// Where it does — an explicit `optional`, a message, a oneof member — `has`
+// asks whether the field was set, and the type says that with an optional
+// property. Where it does not, CEL defines `has` as "not the default value", so
+// `has(this.label)` on a plain proto3 string is `this.label != ""` and nothing
+// about the property's optionality. Reading it as presence there would narrow a
+// property protoc-gen-es already declares required down to `never`, leaving a
+// type no valid message inhabits.
+func presenceTerm(path []string, leaf protoreflect.FieldDescriptor, want presence) (CELTerm, bool) {
+	if leaf.HasPresence() {
+		if want == set {
+			return CELTerm{Path: path, Kind: TermPresent}, true
+		}
+		return CELTerm{Path: path, Kind: TermAbsent}, true
+	}
+
+	// A list or a map compares against "empty", which is neither a presence
+	// nor a scalar narrowing; the rest carry the field's zero value.
+	if leaf.IsList() || leaf.IsMap() {
+		return CELTerm{}, false
+	}
+	switch {
+	case leaf.Kind() == protoreflect.StringKind && want == set:
+		return CELTerm{Path: path, Kind: TermNonEmpty}, true
+	case leaf.Kind() == protoreflect.StringKind:
+		return CELTerm{Path: path, Kind: TermEmpty}, true
+	case leaf.Kind() == protoreflect.EnumKind && want == unset:
+		return CELTerm{Path: path, Kind: TermZero}, true
+	}
+	// A non-zero number, bytes or enum: no type rules the zero value out.
+	return CELTerm{}, false
 }
 
 // selectPath resolves a chain of selects rooted at `this` against the message

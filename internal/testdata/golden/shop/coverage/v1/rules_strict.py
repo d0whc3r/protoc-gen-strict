@@ -11,10 +11,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Annotated
 
-from google.protobuf import any_pb2 as _any_pb2
-from google.protobuf import duration_pb2 as _duration_pb2
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import any_pb2 as _google_protobuf_any_pb2
+from google.protobuf import duration_pb2 as _google_protobuf_duration_pb2
+from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
 from shop.coverage.v1.rules_pb2 import (
+    AmbiguityCoverage as AmbiguityCoverage,
     CelNarrowingCoverage as CelNarrowingCoverage,
     CelRuleCoverage as CelRuleCoverage,
     CollectionRuleCoverage as CollectionRuleCoverage,
@@ -207,32 +208,32 @@ ScalarRuleCoveragePinned = Annotated[
 
 # WellKnownRuleCoverage exercises well-known types and their rule families.
 WellKnownRuleCoverageTimeout = Annotated[
-    _duration_pb2.Duration,
+    _google_protobuf_duration_pb2.Duration,
     "duration.gte.seconds = 1",
     "duration.lte.seconds = 300",
 ]
 WellKnownRuleCoverageInterval = Annotated[
-    _duration_pb2.Duration,
+    _google_protobuf_duration_pb2.Duration,
     "duration.in = [{seconds: 60}, {seconds: 300}, {seconds: 900}]",
 ]
 WellKnownRuleCoverageSeenAt = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "timestamp.lt_now = true",
 ]
 WellKnownRuleCoverageExpiresAt = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "timestamp.gt_now = true",
 ]
 WellKnownRuleCoverageRecent = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "timestamp.within.seconds = 86400",
 ]
 WellKnownRuleCoverageAfterEpoch = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "timestamp.gte = {}",
 ]
 WellKnownRuleCoverageDetail = Annotated[
-    _any_pb2.Any,
+    _google_protobuf_any_pb2.Any,
     "any.in = [type.googleapis.com/google.protobuf.Duration]",
 ]
 
@@ -360,4 +361,60 @@ CelRuleCoverageNested = Annotated[
 #   refs: inner, mask, paths, this
 
 # Inner holds the fields the nested-shape rule reaches into: a message field, which tracks presence, and an enum.
+
+# AmbiguityCoverage exercises the cases where the proto text and what the generated code declares come apart: a property named by something other than the field, a rule combination no target can carry, and a rule the overlay has to report rather than translate.
+# oneof channel: exactly one of email, phone
+# cel[ambiguity.implicit_presence]: has(this.label) && !has(this.legacy_note)
+#   message: label must be set and legacy_note must be left empty
+#   refs: label, legacy_note, this
+#   calls: !_, _&&_
+# cel[ambiguity.presence_and_value]: has(this.nickname) && this.nickname != ''
+#   message: nickname must be set and non-empty
+#   refs: nickname, this
+#   calls: _!=_, _&&_
+# cel[ambiguity.multiline]: this.label != '' ||
+# this.legacy_note != ''
+#   message: label and legacy_note must not both be empty
+#   refs: label, legacy_note, this
+#   calls: _!=_, _||_
+# cel[ambiguity.oneof_member]: has(this.email)
+#   message: email must be the channel that is set
+#   refs: email, this
+AmbiguityCoverageUserId = Annotated[
+    str,
+    "string.uuid = true",
+]
+AmbiguityCoverageConstructor = Annotated[
+    str,
+    "string.min_len = 1",
+]
+AmbiguityCoverageEmail = Annotated[
+    str,
+    "string.email = true",
+]
+AmbiguityCoveragePhone = Annotated[
+    str,
+    "string.min_len = 5",
+]
+AmbiguityCoverageUncheckedDetail = Annotated[
+    StringRuleCoverage,
+    "ignore = IGNORE_ALWAYS",
+]
+AmbiguityCoverageOutsideWindow = Annotated[
+    int,
+    "int32.gt = 20",
+    "int32.lt = 10",
+]
+AmbiguityCoverageOptionalTags = Annotated[
+    Sequence[str],
+    "repeated.items.ignore = IGNORE_IF_ZERO_VALUE",
+    "repeated.items.string.min_len = 3",
+]
+AmbiguityCoverageQuantity = Annotated[
+    int,
+    "cel[ambiguity.field_multiline]: this > 0 &&\nthis % 10 == 0",
+    "  message: quantity must be a positive multiple of ten",
+    "  refs: this",
+    "  calls: _%_, _&&_, _==_, _>_",
+]
 

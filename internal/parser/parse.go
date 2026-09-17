@@ -97,7 +97,6 @@ func parseField(field *protogen.Field) (FieldMetadata, error) {
 	desc := field.Desc
 	meta := FieldMetadata{
 		Name:      string(desc.Name()),
-		JSONName:  desc.JSONName(),
 		ProtoType: protoTypeName(desc),
 		Type:      typeRef(desc),
 		Repeated:  desc.IsList(),

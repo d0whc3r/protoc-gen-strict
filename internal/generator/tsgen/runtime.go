@@ -1,4 +1,4 @@
-package generator
+package tsgen
 
 import (
 	_ "embed"
@@ -19,7 +19,7 @@ const strictTypesFile = "strict/types.ts"
 //go:embed strict_types.ts
 var strictTypesSource string
 
-// generateStrictTypes emits the shared module. Called once, after every file.
-func generateStrictTypes(gen *protogen.Plugin) {
+// WriteRuntime emits the shared module. Called once, after every file.
+func WriteRuntime(gen *protogen.Plugin) {
 	gen.NewGeneratedFile(strictTypesFile, "").P(strings.TrimRight(strictTypesSource, "\n"))
 }

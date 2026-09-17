@@ -378,6 +378,94 @@ message CelNarrowingCoverage {
   Inner inner = 6;
 }
 
+// AmbiguityCoverage exercises the cases where the proto text and what the
+// generated code declares come apart: a property named by something other than
+// the field, a rule combination no target can carry, and a rule the overlay has
+// to report rather than translate.
+message AmbiguityCoverage {
+  // A presence test on fields with no presence. CEL reads `has` on a plain
+  // proto3 scalar as "not the default value", so these narrow the value rather
+  // than the optionality of the property.
+  option (buf.validate.message).cel = {
+    id: "ambiguity.implicit_presence"
+    message: "label must be set and legacy_note must be left empty"
+    expression: "has(this.label) && !has(this.legacy_note)"
+  };
+  // Presence and a value bound on one field. Both belong in the type, and
+  // neither may replace the other.
+  option (buf.validate.message).cel = {
+    id: "ambiguity.presence_and_value"
+    message: "nickname must be set and non-empty"
+    expression: "has(this.nickname) && this.nickname != ''"
+  };
+  // An expression written across several lines. Both overlays quote it in a
+  // comment, where an unescaped newline would end the comment and leave the
+  // rest of the expression behind as code.
+  option (buf.validate.message).cel = {
+    id: "ambiguity.multiline"
+    message: "label and legacy_note must not both be empty"
+    expression:
+      "this.label != '' ||\n"
+      "this.legacy_note != ''"
+  };
+  // A path onto a oneof member. protoc-gen-es declares the oneof as one
+  // discriminated-union property and its members as arms, so there is no
+  // property to narrow and the conjunct is left to runtime validation.
+  option (buf.validate.message).cel = {
+    id: "ambiguity.oneof_member"
+    message: "email must be the channel that is set"
+    expression: "has(this.email)"
+  };
+
+  // The JSON name is overridden, which renames the wire encoding and nothing
+  // else: protobuf-es still declares the property after the proto field name.
+  string user_id = 1 [
+    json_name = "external-id",
+    (buf.validate.field).string.uuid = true
+  ];
+  // A name every JavaScript object already carries. protobuf-es escapes the
+  // property with a trailing `$`.
+  string constructor = 2 [(buf.validate.field).string.min_len = 1];
+  // Narrowed to non-empty by the implicit-presence rule above.
+  string label = 4;
+  // Narrowed to empty by the implicit-presence rule above.
+  string legacy_note = 5;
+  // Required and non-empty by the presence-and-value rule above.
+  optional string nickname = 6;
+  // Either channel may be set, or neither: without `required` the union stands
+  // as protoc-gen-es declared it, and the member rules hold at runtime only.
+  oneof channel {
+    // Email address.
+    string email = 7 [(buf.validate.field).string.email = true];
+    // E.164 phone number.
+    string phone = 8 [(buf.validate.field).string.min_len = 5];
+  }
+  // Validation is switched off for this field, the recursion into the message
+  // it carries included, so the overlay must not demand the target's strict
+  // type either.
+  StringRuleCoverage unchecked_detail = 9 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+  // A reversed range: protovalidate reads a lower bound above the upper one as
+  // "outside 10..20", which a JSONSchema `minimum` and `maximum` cannot say.
+  int32 outside_window = 10 [(buf.validate.field).int32 = {
+    gt: 20
+    lt: 10
+  }];
+  // Element rules that are skipped for an empty element, so a `minLength` on
+  // the array items would reject what protovalidate accepts.
+  repeated string optional_tags = 11 [(buf.validate.field).repeated.items = {
+    ignore: IGNORE_IF_ZERO_VALUE
+    string: {min_len: 3}
+  }];
+  // The same across several lines, on a field rather than the message.
+  int32 quantity = 12 [(buf.validate.field).cel = {
+    id: "ambiguity.field_multiline"
+    message: "quantity must be a positive multiple of ten"
+    expression:
+      "this > 0 &&\n"
+      "this % 10 == 0"
+  }];
+}
+
 // CoverageService exists for the two RPC shapes the overlay has to resolve.
 service CoverageService {
   // Takes a message this run narrows, so the overlay retypes its schema.

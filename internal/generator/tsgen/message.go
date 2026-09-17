@@ -1,4 +1,7 @@
-package generator
+// Package tsgen writes the TypeScript overlay: one <prefix>.strict.ts per proto
+// file, plus the shared strict/types.ts module. Every type it prints is derived
+// from what protoc-gen-es declared, never re-declared.
+package tsgen
 
 import (
 	"maps"
@@ -8,6 +11,7 @@ import (
 
 	"google.golang.org/protobuf/compiler/protogen"
 
+	"github.com/d0whc3r/protoc-gen-strict/internal/generator/emit"
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
 
@@ -18,13 +22,27 @@ type tsProp struct {
 	doc []string
 }
 
-// writeTypeScript writes a <prefix>.strict.ts overlay on protoc-gen-es output.
+// Write writes a <prefix>.strict.ts overlay on protoc-gen-es output.
 //
 // Every message becomes `<Name>Strict`: the generated type narrowed by the
 // rules a type can express, untouched otherwise. It stays assignable to the
 // type it narrows, so anything protobuf-es generated still accepts it.
-func writeTypeScript(gen *protogen.Plugin, file *protogen.File, ctx *Context) {
+func Write(gen *protogen.Plugin, file *protogen.File, ctx *Context) {
 	f := newTSFile(ctx, file)
+
+	// Every name this file declares is reserved first, so an import of a
+	// same-named symbol from another package is the one that gets renamed.
+	for _, msg := range ctx.byFile[f.proto] {
+		f.declare(ctx.strictName(msg.Name))
+		if ctx.strictSchemas[msg.Name] {
+			f.declare(ctx.tsName(msg.Name) + "StrictSchema")
+		}
+	}
+	for _, service := range file.Services {
+		f.declare(string(service.Desc.Name()) + "Strict")
+		f.declare(string(service.Desc.Name()) + "StrictDescriptor")
+	}
+
 	for _, msg := range ctx.byFile[f.proto] {
 		f.message(msg)
 	}
@@ -53,9 +71,10 @@ func writeTypeScript(gen *protogen.Plugin, file *protogen.File, ctx *Context) {
 // message emits `<Name>Strict`.
 func (f *tsFile) message(msg parser.MessageMetadata) {
 	name := f.shape(f.ctx.tsName(msg.Name))
+	strict := f.declare(f.ctx.strictName(msg.Name))
 	var props []tsProp
 	var required []string
-	var runtimeOnly []runtimeNote
+	var runtimeOnly []emit.RuntimeNote
 
 	tree := f.ctx.celTrees[msg.Name]
 	seen := map[string]bool{}
@@ -67,34 +86,38 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 			seen[field.OneofName] = true
 			if prop, ok := f.oneofProp(name, msg, field.OneofName); ok {
 				props = append(props, prop)
+				continue
 			}
+			// Nothing narrows the union, but its members still carry rules,
+			// and this is the only place the overlay can name them.
+			runtimeOnly = append(runtimeOnly, oneofMemberNotes(msg, field.OneofName)...)
 			continue
 		}
 		n := f.ctx.narrowingOf(field)
 		node := tree.children[field.Name]
 		typ := f.applyCEL(name, field, node, f.narrowedType(name, field, n))
 		if typ != "" {
-			props = append(props, tsProp{key: field.JSONName, typ: typ, doc: propDoc(field, n)})
-		} else if rules := ruleComments(field); len(rules) > 0 {
-			runtimeOnly = append(runtimeOnly, runtimeNote{subject: field.Name, lines: rules})
+			props = append(props, tsProp{key: localName(field.Name), typ: typ, doc: propDoc(field, n)})
+		} else if rules := emit.RuleComments(field); len(rules) > 0 {
+			runtimeOnly = append(runtimeOnly, emit.RuntimeNote{Subject: field.Name, Lines: rules})
 		}
-		if n.Required || (node != nil && node.term == parser.TermPresent) {
-			required = append(required, field.JSONName)
+		if n.Required || (node != nil && node.present) {
+			required = append(required, localName(field.Name))
 		}
 	}
 
 	f.doc("", f.messageDoc(msg, runtimeOnly))
 	switch {
 	case len(props) == 0 && len(required) == 0:
-		f.P("export type ", name, "Strict = ", name, ";")
+		f.P("export type ", strict, " = ", name, ";")
 	case len(props) == 0:
-		f.P("export type ", name, "Strict = ", f.helper("Require"), "<", name, ", ", quotedUnion(required), ">;")
+		f.P("export type ", strict, " = ", f.helper("Require"), "<", name, ", ", quotedUnion(required), ">;")
 	default:
 		open, close := "", ""
 		if len(required) > 0 {
 			open, close = f.helper("Require")+"<", ", "+quotedUnion(required)+">"
 		}
-		f.P("export type ", name, "Strict = ", open, f.helper("Narrow"), "<", name, ", {")
+		f.P("export type ", strict, " = ", open, f.helper("Narrow"), "<", name, ", {")
 		for _, prop := range props {
 			f.doc("  ", prop.doc)
 			f.P("  ", prop.key, ": ", prop.typ, ";")
@@ -109,7 +132,7 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 // enums and well-known types resolve to whatever protoc-gen-es chose without
 // this plugin knowing any of them.
 func (f *tsFile) narrowedType(owner string, field parser.FieldMetadata, n narrowing) string {
-	indexed := indexedProp(owner, field.JSONName)
+	indexed := indexedProp(owner, localName(field.Name))
 	switch {
 	case n.Target != "":
 		typ := f.strictRef(n.Target)
@@ -169,10 +192,18 @@ func (f *tsFile) applyCEL(owner string, field parser.FieldMetadata, node *celNod
 	// A term intersects rather than replaces: that satisfies `Narrow`'s
 	// constraint by construction, and tells the truth when the two disagree. A
 	// uuid a rule also requires empty becomes `Uuid & ""`, uninhabited.
-	indexed := indexedProp(owner, field.JSONName)
+	indexed := indexedProp(owner, localName(field.Name))
 	if base == "" {
 		base = indexed
 	}
+
+	// `Require` drops the `?` but not an `undefined` written into the property
+	// type itself, which protoc-gen-es does emit — so a field a rule declares
+	// present is narrowed here and lifted out of optionality there.
+	if node.present && base == indexed {
+		base = "NonNullable<" + indexed + ">"
+	}
+
 	switch node.term {
 	case parser.TermAbsent:
 		return "never"
@@ -184,7 +215,7 @@ func (f *tsFile) applyCEL(owner string, field parser.FieldMetadata, node *celNod
 		return base + " & " + f.helper("NonEmpty")
 	default:
 		if base == indexed {
-			return "" // `present` alone changes the optionality, not the type
+			return "" // nothing narrowed the value; only the optionality moves
 		}
 		return base
 	}
@@ -200,13 +231,13 @@ func (f *tsFile) narrowNested(owner string, msg parser.MessageMetadata, node *ce
 			continue
 		}
 		child := node.children[name]
-		if child.term == parser.TermPresent {
-			required = append(required, field.JSONName)
+		if child.present {
+			required = append(required, localName(field.Name))
 		}
 		// The field's own rules already live in `owner`, the target's strict
 		// type, so only the CEL term applies here.
 		if typ := f.applyCEL(owner, field, child, ""); typ != "" {
-			props = append(props, field.JSONName+": "+typ+"; ")
+			props = append(props, localName(field.Name)+": "+typ+"; ")
 		}
 	}
 
@@ -232,11 +263,11 @@ func (f *tsFile) oneofProp(owner string, msg parser.MessageMetadata, name string
 		return tsProp{}, false
 	}
 
-	key := camel(name)
+	key := localName(name)
 	prop := tsProp{
 		key: key,
 		typ: "Exclude<" + indexedProp(owner, key) + ", { case: undefined }>",
-		doc: []string{oneofLine(msg.Oneofs[idx])},
+		doc: []string{emit.OneofLine(msg.Oneofs[idx])},
 	}
 	// Member rules cannot narrow the arm, so they are printed against the member
 	// name instead.
@@ -244,26 +275,42 @@ func (f *tsFile) oneofProp(owner string, msg parser.MessageMetadata, name string
 		if field.OneofName != name {
 			continue
 		}
-		for _, line := range ruleComments(field) {
+		for _, line := range emit.RuleComments(field) {
 			prop.doc = append(prop.doc, field.Name+": "+line)
 		}
 	}
 	return prop, true
 }
 
+// oneofMemberNotes lists the rules on the members of a oneof nothing narrowed.
+// protoc-gen-es models the oneof as a discriminated union, so no member rule
+// reaches an arm; every one of them holds at runtime only.
+func oneofMemberNotes(msg parser.MessageMetadata, name string) []emit.RuntimeNote {
+	var out []emit.RuntimeNote
+	for _, field := range msg.Fields {
+		if field.OneofName != name {
+			continue
+		}
+		if rules := emit.RuleComments(field); len(rules) > 0 {
+			out = append(out, emit.RuntimeNote{Subject: field.Name, Lines: rules})
+		}
+	}
+	return out
+}
+
 // messageDoc renders what belongs above the type: the leading comment, the
 // rules naming no single field, and every field rule that produced no
 // narrowing. A rule that stops being carried then shows up in the diff.
-func (f *tsFile) messageDoc(msg parser.MessageMetadata, runtimeOnly []runtimeNote) []string {
+func (f *tsFile) messageDoc(msg parser.MessageMetadata, runtimeOnly []emit.RuntimeNote) []string {
 	var lines []string
 	if msg.Comments != "" {
-		lines = append(lines, oneLine(msg.Comments))
+		lines = append(lines, emit.OneLine(msg.Comments))
 	}
 	// A `(buf.validate.message).oneof` names ordinary properties, so no
 	// discriminated union rules out setting two of them.
 	for _, oneof := range msg.Oneofs {
 		if oneof.Name == "" {
-			runtimeOnly = append(runtimeOnly, runtimeNote{subject: "oneof", lines: []string{oneofLine(oneof)}})
+			runtimeOnly = append(runtimeOnly, emit.RuntimeNote{Subject: "oneof", Lines: []string{emit.OneofLine(oneof)}})
 		}
 	}
 
@@ -276,8 +323,8 @@ func (f *tsFile) messageDoc(msg parser.MessageMetadata, runtimeOnly []runtimeNot
 	if len(runtimeOnly) > 0 {
 		lines = append(lines, "", "Left to runtime validation, having no type equivalent:")
 		for _, note := range runtimeOnly {
-			lines = append(lines, "  "+note.subject)
-			for _, line := range note.lines {
+			lines = append(lines, "  "+note.Subject)
+			for _, line := range note.Lines {
 				lines = append(lines, "    "+line)
 			}
 		}
@@ -288,16 +335,16 @@ func (f *tsFile) messageDoc(msg parser.MessageMetadata, runtimeOnly []runtimeNot
 // propDoc lists every rule on a narrowed field, then names the ones the type
 // carries; the rest hold only at runtime.
 func propDoc(field parser.FieldMetadata, n narrowing) []string {
-	lines := ruleComments(field)
+	lines := emit.RuleComments(field)
 	if len(n.consumed) == 0 {
 		return lines
 	}
 	carried := slices.Sorted(maps.Keys(n.consumed))
-	return append(lines, "", carriedPrefix+strings.Join(carried, ", ")+".")
+	return append(lines, "", emit.CarriedPrefix+strings.Join(carried, ", ")+".")
 }
 
 // indexedProp is one property as protoc-gen-es declared it, the base every
 // narrowing builds on.
-func indexedProp(owner, jsonName string) string {
-	return owner + "[" + strconv.Quote(jsonName) + "]"
+func indexedProp(owner, local string) string {
+	return owner + "[" + strconv.Quote(local) + "]"
 }

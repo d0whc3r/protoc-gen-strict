@@ -1,4 +1,4 @@
-package generator
+package tsgen
 
 import (
 	"strings"
@@ -34,7 +34,10 @@ type Context struct {
 	strictSchemas map[string]bool
 }
 
-func buildContext(files []*protogen.File) (*Context, error) {
+// New resolves every message the run parsed, once. files is the whole request,
+// because a narrowing reaches across files; parsed holds only the generated
+// ones, keyed by proto path, which is the set this run can narrow.
+func New(files []*protogen.File, parsed map[string][]parser.MessageMetadata) *Context {
 	c := &Context{
 		messages:      map[string]parser.MessageMetadata{},
 		fileOf:        map[string]string{},
@@ -54,15 +57,10 @@ func buildContext(files []*protogen.File) (*Context, error) {
 		indexMessages(c.fileOf, file.Desc.Path(), file.Messages)
 	}
 
-	// Only generated files are parsed, so c.messages is the set this run can
-	// narrow, which is what placeable relies on.
 	for _, file := range files {
-		if !file.Generate {
+		messages, ok := parsed[file.Desc.Path()]
+		if !ok {
 			continue
-		}
-		messages, err := parser.ParseFile(file)
-		if err != nil {
-			return nil, err
 		}
 		c.byFile[file.Desc.Path()] = messages
 		for _, msg := range messages {
@@ -110,7 +108,7 @@ func buildContext(files []*protogen.File) (*Context, error) {
 			}
 		}
 	}
-	return c, nil
+	return c
 }
 
 // indexMessages records the file each message is declared in, nested included.

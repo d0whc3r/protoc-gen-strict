@@ -11,8 +11,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Annotated
 
-from google.protobuf import duration_pb2 as _duration_pb2
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import duration_pb2 as _google_protobuf_duration_pb2
+from google.protobuf import timestamp_pb2 as _google_protobuf_timestamp_pb2
 from shop.inventory.v1.warehouse_pb2 import (
     ContactPoint as ContactPoint,
     OpeningHours as OpeningHours,
@@ -37,7 +37,7 @@ WarehouseAddress = Annotated[
     "required",
 ]
 WarehouseMaxDwellTime = Annotated[
-    _duration_pb2.Duration,
+    _google_protobuf_duration_pb2.Duration,
     "duration.gte.seconds = 3600",
     "duration.lte.seconds = 2592000",
 ]
@@ -140,7 +140,7 @@ StockMovementQuantityDelta = Annotated[
     "sint32.lte = 100000",
 ]
 StockMovementOccurredAt = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "required",
     "timestamp.lt_now = true",
 ]
@@ -171,7 +171,7 @@ StockLevelReserved = Annotated[
     "uint64.lte = 100000000",
 ]
 StockLevelCountedAt = Annotated[
-    _timestamp_pb2.Timestamp,
+    _google_protobuf_timestamp_pb2.Timestamp,
     "timestamp.within.seconds = 7776000",
 ]
 StockLevelReorderThreshold = Annotated[

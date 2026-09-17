@@ -85,8 +85,8 @@ func TestTranslateCELConjunction(t *testing.T) {
 }
 
 // TestTranslateCELRepeatedPath pins the order two terms on one path come back
-// in. They contradict each other, and the generator keeps the last, which only
-// means something if "last" is the last conjunct in the source.
+// in. They contradict each other, and the generator keeps the first and reports
+// the second, which only means something if the order is the source order.
 func TestTranslateCELRepeatedPath(t *testing.T) {
 	root := loadMessage(t, coverageMessage)
 	terms, skipped := translate(t, root, "this.slug == '' && this.slug != ''")
@@ -99,6 +99,65 @@ func TestTranslateCELRepeatedPath(t *testing.T) {
 		if got := termKey(term); got != want[i] {
 			t.Errorf("term %d: got %q, want %q", i, got, want[i])
 		}
+	}
+}
+
+// TestTranslateCELPresence covers what `has()` means per field.
+//
+// CEL only reads it as "was it set" where the field tracks presence. On a plain
+// proto3 scalar it is "not the default value", and translating it as presence
+// would narrow a property protoc-gen-es declares required down to `never`.
+func TestTranslateCELPresence(t *testing.T) {
+	root := loadMessage(t, "shop.coverage.v1.AmbiguityCoverage")
+
+	tests := []struct {
+		expression string
+		want       string // "<path>:<kind>", or "" when nothing should be carried
+	}{
+		{"has(this.nickname)", "nickname:present"},                 // explicit proto3 optional
+		{"!has(this.nickname)", "nickname:absent"},                 //
+		{"has(this.unchecked_detail)", "unchecked_detail:present"}, // a message
+		{"has(this.label)", "label:nonEmpty"},                      // implicit presence: a value test
+		{"!has(this.label)", "label:empty"},                        //
+		{"has(this.quantity)", ""},                                 // no type rules out a non-zero number
+		{"!has(this.quantity)", ""},                                // nor pins it to zero
+		{"has(this.optional_tags)", ""},                            // a list compares against empty
+		{"!has(this.optional_tags)", ""},                           //
+	}
+
+	for _, test := range tests {
+		t.Run(test.expression, func(t *testing.T) {
+			terms, skipped := translate(t, root, test.expression)
+			if test.want == "" {
+				if len(terms) != 0 {
+					t.Fatalf("expected nothing carried, got %v", terms)
+				}
+				if len(skipped) == 0 {
+					t.Fatal("a conjunct that is not carried must be reported")
+				}
+				return
+			}
+			if len(terms) != 1 {
+				t.Fatalf("want 1 term, got %d (skipped %v)", len(terms), skipped)
+			}
+			if got := termKey(terms[0]); got != test.want {
+				t.Errorf("got %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+// TestTranslateCELEnumPresence covers the enum, whose zero is a declared member
+// and so the one implicit-presence type a `!has` can name.
+func TestTranslateCELEnumPresence(t *testing.T) {
+	root := loadMessage(t, coverageMessage)
+
+	terms, _ := translate(t, root, "!has(this.flavor)")
+	if len(terms) != 1 || termKey(terms[0]) != "flavor:zero" {
+		t.Errorf("!has(this.flavor) = %v, want one flavor:zero term", terms)
+	}
+	if terms, skipped := translate(t, root, "has(this.flavor)"); len(terms) != 0 || len(skipped) != 1 {
+		t.Errorf("has(this.flavor) = %v / %v, want it reported rather than carried", terms, skipped)
 	}
 }
 

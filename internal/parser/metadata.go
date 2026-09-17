@@ -24,7 +24,6 @@ type TypeRef struct {
 // FieldMetadata is one proto field plus every validation rule on it.
 type FieldMetadata struct {
 	Name       string  // proto field name, e.g. "user_id"
-	JSONName   string  // JSON/camelCase name, e.g. "userId"
 	ProtoType  string  // "string", "int32", "message:example.v1.Address", "enum:..."
 	Type       TypeRef // declaring file + package-relative name, empty for scalars
 	Repeated   bool

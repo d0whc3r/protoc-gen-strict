@@ -2,7 +2,7 @@
 // source: shop/coverage/v1/rules.proto
 
 import type { Email, Narrow, NonEmpty, NonEmptyList, Require, Uuid } from "../../../strict/types";
-import type { CelNarrowingCoverage, CelNarrowingCoverage_Inner, CelRuleCoverage, CollectionRuleCoverage, NumericRuleCoverage, PresenceRuleCoverage, ScalarRuleCoverage, StringRuleCoverage, WellKnownRuleCoverage } from "./rules_pb";
+import type { AmbiguityCoverage, CelNarrowingCoverage, CelNarrowingCoverage_Inner, CelRuleCoverage, CollectionRuleCoverage, NumericRuleCoverage, PresenceRuleCoverage, ScalarRuleCoverage, StringRuleCoverage, WellKnownRuleCoverage } from "./rules_pb";
 import { CoverageService, StringRuleCoverageSchema } from "./rules_pb";
 import { EmptySchema } from "@bufbuild/protobuf/wkt";
 import type { GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
@@ -290,11 +290,60 @@ export type CelNarrowingCoverageStrict = Require<Narrow<CelNarrowingCoverage, {
   flavor: Extract<CelNarrowingCoverage["flavor"], 0>;
   note: never;
   detail: Narrow<StringRuleCoverageStrict, { uuid: StringRuleCoverageStrict["uuid"] & NonEmpty; }>;
-  inner: Require<Narrow<CelNarrowingCoverage_Inner, { flavor: Extract<CelNarrowingCoverage_Inner["flavor"], 0>; }>, "stamp">;
+  inner: Require<Narrow<CelNarrowingCoverage_Inner, { stamp: NonNullable<CelNarrowingCoverage_Inner["stamp"]>; flavor: Extract<CelNarrowingCoverage_Inner["flavor"], 0>; }>, "stamp">;
 }>, "detail">;
 
 /** Inner holds the fields the nested-shape rule reaches into: a message field, which tracks presence, and an enum. */
 export type CelNarrowingCoverage_InnerStrict = CelNarrowingCoverage_Inner;
+
+/**
+ * AmbiguityCoverage exercises the cases where the proto text and what the generated code declares come apart: a property named by something other than the field, a rule combination no target can carry, and a rule the overlay has to report rather than translate.
+ *
+ * Carried into the type: cel[ambiguity.implicit_presence], cel[ambiguity.presence_and_value].
+ *
+ * Left to runtime validation, having no type equivalent:
+ *   cel[ambiguity.multiline]
+ *     this.label != "" || this.legacy_note != ""
+ *     message: label and legacy_note must not both be empty
+ *   cel[ambiguity.oneof_member]
+ *     has(this.email)
+ *     message: email must be the channel that is set
+ *   email
+ *     string.email = true
+ *   phone
+ *     string.min_len = 5
+ *   unchecked_detail
+ *     ignore = IGNORE_ALWAYS
+ *   outside_window
+ *     int32.gt = 20
+ *     int32.lt = 10
+ *   optional_tags
+ *     repeated.items.ignore = IGNORE_IF_ZERO_VALUE
+ *     repeated.items.string.min_len = 3
+ *   quantity
+ *     cel[ambiguity.field_multiline]: this > 0 &&
+ * this % 10 == 0
+ *       message: quantity must be a positive multiple of ten
+ *       refs: this
+ *       calls: _%_, _&&_, _==_, _>_
+ */
+export type AmbiguityCoverageStrict = Require<Narrow<AmbiguityCoverage, {
+  /**
+   * string.uuid = true
+   *
+   * Carried into the type: string.uuid.
+   */
+  userId: Uuid;
+  /**
+   * string.min_len = 1
+   *
+   * Carried into the type: string.min_len.
+   */
+  constructor$: NonEmpty;
+  label: AmbiguityCoverage["label"] & NonEmpty;
+  legacyNote: AmbiguityCoverage["legacyNote"] & "";
+  nickname: NonNullable<AmbiguityCoverage["nickname"]> & NonEmpty;
+}>, "nickname">;
 
 /**
  * Describes shop.coverage.v1.StringRuleCoverage, reporting StringRuleCoverageStrict as its valid type.

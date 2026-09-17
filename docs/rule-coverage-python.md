@@ -27,13 +27,19 @@ The alias name is the message name and the field name, so `User.email` is
 `UserEmail` and `Warehouse.Address.city` is `WarehouseAddressCity`. A field with
 no rules gets no alias.
 
+A type from another file is reached through a module alias built from the whole
+proto path — `shop/common/v1/common.proto` is `_shop_common_v1_common_pb2`. The
+base name protoc-gen-pyi uses would collapse `a/common.proto` and
+`b/common.proto` onto one alias, where the second import silently rebinds the
+first.
+
 ## The same rules, in Python
 
 | TypeScript | Python |
 |---|---|
 | The rule becomes the type: `Uuid`, `NonEmptyList<...>`, `Exclude<...>` | The type stays what protoc-gen-pyi declared (`str`, `Sequence[str]`, `Mapping[str, str]`), and the rule is one metadata string next to it |
 | `required` lifts the field into `Require<..., "f">` | `"required"`, the first metadata entry; the field is declared exactly as before |
-| A message-typed field becomes `MoneyStrict` | It stays the plain class, `_common_pb2.Money`; there is no strict class to point at |
+| A message-typed field becomes `MoneyStrict` | It stays the plain class, `_shop_common_v1_common_pb2.Money`; there is no strict class to point at |
 | A rule with no type equivalent goes to the JSDoc, under "Left to runtime validation" | There is no such list, and no "Carried into the type" line either: carried and not carried read alike, because nothing is carried |
 | `(buf.validate.oneof).required` removes the `{ case: undefined }` arm | A comment above the message's aliases: `# required oneof key: exactly one of id, sku` |
 | A message-level CEL rule narrows the fields on its path, or is reported | Always a comment above the message's aliases, with the expression, its message and the idents and functions the parse found |
@@ -82,7 +88,6 @@ the generated swagger is never patched after the fact.
 | the same types' `.gt`, `.lt` | the bound, plus `exclusiveMinimum` or `exclusiveMaximum` |
 | `repeated.min_items`, `max_items`, `unique` | `minItems`, `maxItems`, `uniqueItems` |
 | `map.min_pairs`, `max_pairs` | `minProperties`, `maxProperties` |
-| `required` | the field's JSON name, in the message's `required` |
 
 A rule under `repeated.items` goes through the same table, and that is right by
 construction: protoc-gen-openapiv2 puts every scalar keyword of an array field on
@@ -101,6 +106,11 @@ a rule the TypeScript overlay has no way to carry:
 ### What is deliberately not carried
 
 - **A field with `ignore` set**, for the reason the TypeScript overlay drops it.
+  `repeated.items.ignore` does the same for the element rules alone.
+- **A reversed numeric range,** where protovalidate reads a lower bound above the
+  upper one as "outside that range" and JSONSchema has no way to say "or".
+- **`required`,** which grpc-gateway would also hoist onto the flattened query
+  parameter of a GET. See [Rule coverage: OpenAPI](rule-coverage-openapi.md).
 - **64-bit integer bounds.** JSON carries them as strings, and
   protoc-gen-openapiv2 types them `{"type": "string", "format": "int64"}`, where a
   `minimum` describes nothing.

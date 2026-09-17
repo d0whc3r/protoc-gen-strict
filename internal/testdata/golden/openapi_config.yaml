@@ -163,6 +163,18 @@ openapiOptions:
     - field: shop.coverage.v1.CelRuleCoverage.window_end
       option:
         maximum: 1440
+    - field: shop.coverage.v1.AmbiguityCoverage.user_id
+      option:
+        format: "uuid"
+    - field: shop.coverage.v1.AmbiguityCoverage.constructor
+      option:
+        minLength: 1
+    - field: shop.coverage.v1.AmbiguityCoverage.email
+      option:
+        format: "email"
+    - field: shop.coverage.v1.AmbiguityCoverage.phone
+      option:
+        minLength: 5
     - field: shop.inventory.v1.Warehouse.id
       option:
         format: "uuid"

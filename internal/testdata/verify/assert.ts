@@ -13,7 +13,11 @@ import type {
 import { CatalogServiceStrict, CreateProductRequestStrictSchema } from "./gen/typescript/shop/catalog/v1/product.strict";
 import type { ContactPointStrict, StockMovementStrict } from "./gen/typescript/shop/inventory/v1/warehouse.strict";
 import type { MoneyStrict } from "./gen/typescript/shop/common/v1/common.strict";
-import type { CelNarrowingCoverageStrict } from "./gen/typescript/shop/coverage/v1/rules.strict";
+import type {
+  AmbiguityCoverageStrict,
+  CelNarrowingCoverageStrict,
+} from "./gen/typescript/shop/coverage/v1/rules.strict";
+import type { AmbiguityCoverage } from "./gen/typescript/shop/coverage/v1/rules_pb";
 
 type Expect<T extends true> = T;
 type Extends<A, B> = A extends B ? true : false;
@@ -110,3 +114,43 @@ void _intersected;
 // @ts-expect-error slug is constrained to the empty string
 const _slug: CelNarrowingCoverageStrict["slug"] = nonEmpty("x");
 void _slug;
+
+// `has(this.inner.stamp)` on a nested path: making the property required is not
+// enough, because protoc-gen-es writes the `undefined` into the property type.
+type _CelNestedPresent = Expect<
+  Never<Extract<NonNullable<CelNarrowingCoverageStrict["inner"]>["stamp"], undefined>>
+>;
+
+// --- names and the rules no type carries ------------------------------------
+// The property is protobuf-es's local name, never the overridden JSON name:
+// `user_id [json_name = "external-id"]` stays `userId`.
+type _LocalName = Expect<Extends<AmbiguityCoverageStrict["userId"], Uuid>>;
+// A property name JavaScript reserves is escaped, as protobuf-es escapes it.
+type _EscapedName = Expect<Extends<AmbiguityCoverageStrict["constructor$"], NonEmpty>>;
+
+// `has`/`!has` on a field with no presence is a value test, not a presence one:
+// the property protoc-gen-es declares required must stay inhabited.
+type _ImplicitPresence = Expect<Extends<AmbiguityCoverageStrict["label"], NonEmpty>>;
+type _ImplicitAbsence = Expect<Extends<AmbiguityCoverageStrict["legacyNote"], "">>;
+
+// `has(this.nickname) && this.nickname != ''` keeps both halves: the property is
+// required, holds no undefined, and is non-empty.
+type _PresenceAndValue = Expect<Extends<AmbiguityCoverageStrict["nickname"], NonEmpty>>;
+type _PresenceRequired = Expect<
+  Optional<AmbiguityCoverageStrict, "nickname"> extends true ? false : true
+>;
+type _PresenceNotUndefined = Expect<
+  Never<Extract<AmbiguityCoverageStrict["nickname"], undefined>>
+>;
+
+// A oneof without `required` stands as protoc-gen-es declared it, member rules
+// and the CEL term on a member included.
+type _OneofUnnarrowed = Expect<
+  Extends<AmbiguityCoverage["channel"], AmbiguityCoverageStrict["channel"]>
+>;
+
+// IGNORE_ALWAYS switches off the recursion into the message too, so the field
+// keeps the generated type rather than the target's strict one.
+type _IgnoredKeepsGeneratedType = Expect<
+  Extends<AmbiguityCoverage["uncheckedDetail"], AmbiguityCoverageStrict["uncheckedDetail"]>
+>;

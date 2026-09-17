@@ -1,12 +1,17 @@
-package generator
+package tsgen
 
 import (
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/d0whc3r/protoc-gen-strict/internal/generator/emit"
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
+
+// ignoreAlways is the protovalidate mode that skips a field entirely, nested
+// message included.
+const ignoreAlways = "IGNORE_ALWAYS"
 
 // narrowing is what one field contributes to its message's strict type. The
 // zero value means the field is left exactly as protoc-gen-es declared it.
@@ -38,18 +43,18 @@ func (c *Context) fieldNarrowing(field parser.FieldMetadata) narrowing {
 	// which leaves min_len and min_items saying nothing and turns the rest into
 	// a union with the zero. Dropped and reported instead, since under-narrowing
 	// is the safe direction; widen per rule if a schema needs it.
-	if _, ok := ruleValue(field, "ignore"); ok {
+	if _, ok := emit.RuleValue(field, emit.IgnoreRule); ok {
 		return n
 	}
 
 	// Brands describe one string; a rule under repeated.items describes the
 	// element, which this plugin does not narrow.
 	if field.ProtoType == "string" && !field.Repeated {
-		if value, ok := ruleValue(field, "string.uuid"); ok && value == "true" {
+		if value, ok := emit.RuleValue(field, "string.uuid"); ok && value == "true" {
 			n.addBrand("Uuid")
 			n.consumed["string.uuid"] = true
 		}
-		if value, ok := ruleValue(field, "string.email"); ok && value == "true" {
+		if value, ok := emit.RuleValue(field, "string.email"); ok && value == "true" {
 			n.addBrand("Email")
 			n.consumed["string.email"] = true
 		}
@@ -124,6 +129,13 @@ func (n *narrowing) addBrand(brand string) {
 // the fixed point has run.
 func (c *Context) narrowingOf(field parser.FieldMetadata) narrowing {
 	n := c.fieldNarrowing(field)
+	// IGNORE_ALWAYS switches off the recursive validation of the message the
+	// field carries, not only the rules written beside it, so the target's
+	// strict type does not describe this field either. Requiring it would
+	// reject a message protovalidate accepts.
+	if value, _ := emit.RuleValue(field, emit.IgnoreRule); value == ignoreAlways {
+		return n
+	}
 	if target, ok := messageTarget(field); ok && c.needsStrict[target] {
 		n.Target = target
 	}
@@ -142,7 +154,7 @@ func tsOptionalInGenerated(field parser.FieldMetadata) bool {
 
 // enumMembers renders an enum rule's value as a union of numeric literals.
 func enumMembers(field parser.FieldMetadata, kind string) (string, bool) {
-	value, ok := ruleValue(field, kind)
+	value, ok := emit.RuleValue(field, kind)
 	if !ok {
 		return "", false
 	}
@@ -163,7 +175,7 @@ func enumMembers(field parser.FieldMetadata, kind string) (string, bool) {
 // intRule reads a numeric rule such as string.min_len, returning 0 when it is
 // absent or rendered as something other than an integer.
 func intRule(field parser.FieldMetadata, kind string) int {
-	value, ok := ruleValue(field, kind)
+	value, ok := emit.RuleValue(field, kind)
 	if !ok {
 		return 0
 	}
@@ -172,13 +184,4 @@ func intRule(field parser.FieldMetadata, kind string) int {
 		return 0
 	}
 	return n
-}
-
-func ruleValue(field parser.FieldMetadata, kind string) (string, bool) {
-	for _, rule := range field.Rules {
-		if rule.Kind == kind {
-			return rule.Value, true
-		}
-	}
-	return "", false
 }
