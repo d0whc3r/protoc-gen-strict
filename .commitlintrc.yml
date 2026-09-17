@@ -1,0 +1,5 @@
+# Conventional Commits, as release-please reads them off `main` to pick the next
+# version. Enforced per commit by .github/workflows/ci.yml, because this repo
+# merges without squashing: every commit on the branch lands on `main` as it is.
+extends:
+  - "@commitlint/config-conventional"

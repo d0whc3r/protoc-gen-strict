@@ -1,0 +1,54 @@
+# Release build for protoc-gen-strict. `make snapshot` runs it locally;
+# .github/workflows/release.yml runs it for real, after release-please has
+# created the tag and the release.
+version: 2
+
+project_name: protoc-gen-strict
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    # The binary name is the contract: protoc and buf resolve a plugin by
+    # looking for `protoc-gen-<name>` on PATH, so it must stay platform-free.
+    binary: protoc-gen-strict
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    # Reproducible: the build stamps the commit date, not the clock.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  # The archive carries the platform; the binary inside keeps its plain name so
+  # it can be dropped straight onto PATH.
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+# release-please owns the changelog: it is what reads the conventional commits.
+changelog:
+  disable: true
+
+release:
+  # Named rather than inferred from the git remote, so `goreleaser check` and
+  # `make snapshot` work in a clone that has not added one yet.
+  github:
+    owner: d0whc3r
+    name: protoc-gen-strict
+  # release-please already created the release for this tag, with its notes.
+  # Append the binaries to it instead of trying to create it a second time.
+  mode: append
