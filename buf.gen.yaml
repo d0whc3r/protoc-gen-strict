@@ -1,0 +1,46 @@
+version: v2
+clean: true
+# protogen (the protoc-gen-go plugin framework) always resolves a Go import
+# path, even for non-Go output. Managed mode injects go_package so the .proto
+# files stay free of Go-specific options.
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/d0whc3r/protoc-gen-strict/gen
+plugins:
+  # The official generators own the types. protoc-gen-strict only layers the
+  # buf.validate rules on top, so each overlay has to be written into the same
+  # tree as the output it narrows — which is why it runs once per language.
+
+  # TypeScript.
+  - remote: buf.build/bufbuild/es:v2.15.0
+    out: gen/typescript
+    opt: target=ts
+  - local: ./bin/protoc-gen-strict
+    out: gen/typescript
+    opt: paths=source_relative,lang=typescript
+    # Without this buf forks the plugin once per directory. A TypeScript
+    # narrowing reaches across files, so the shard that could not see its target
+    # would silently drop it — and each shard would emit its own strict/types.ts.
+    strategy: all
+
+  # Python.
+  - remote: buf.build/protocolbuffers/python:v34.0
+    out: gen/python
+  - remote: buf.build/protocolbuffers/pyi:v34.0
+    out: gen/python
+  - local: ./bin/protoc-gen-strict
+    out: gen/python
+    opt: paths=source_relative,lang=python
+    strategy: all
+
+  # OpenAPI. Not an overlay: one configuration file that hands the rules to
+  # protoc-gen-openapiv2, which runs in a second pass (buf.gen.openapi.yaml)
+  # because it needs this file to already exist.
+  - local: ./bin/protoc-gen-strict
+    out: gen/openapiv2
+    opt: paths=source_relative,lang=openapi
+    # The keys are fully qualified proto names, so there is a single file for
+    # the whole run and nothing per-directory to shard.
+    strategy: all

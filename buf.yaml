@@ -1,0 +1,25 @@
+version: v2
+modules:
+  - path: proto
+deps:
+  - buf.build/bufbuild/protovalidate
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+  # CoverageService deliberately takes and returns google.protobuf.Empty: an RPC
+  # message declared in a file the plugin is never asked to generate is the case
+  # the overlay has to resolve through the descriptors, and no other fixture
+  # produces it. Scoped to the file because it declares no other RPC. An inline
+  # `buf:lint:ignore` would land in the method's leading comment and from there
+  # in the generated doc.
+  ignore_only:
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - proto/shop/coverage/v1/rules.proto
+    RPC_REQUEST_STANDARD_NAME:
+      - proto/shop/coverage/v1/rules.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - proto/shop/coverage/v1/rules.proto
+breaking:
+  use:
+    - FILE

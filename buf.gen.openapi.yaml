@@ -1,0 +1,34 @@
+version: v2
+# Second pass. protoc-gen-openapiv2 reads its field options from a file that has
+# to exist before it runs, and buf.gen.yaml's protoc-gen-strict pass is what
+# writes it — hence two templates. `make generate` runs them in order.
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/d0whc3r/protoc-gen-strict/gen
+plugins:
+  # Local, not `remote:`. A BSR plugin runs on buf's servers, where
+  # openapi_configuration has no local file to read.
+  - local:
+      [
+        "go",
+        "run",
+        "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.29.0",
+      ]
+    out: gen/openapiv2
+    # The config keys span every package, and a field option for a message this
+    # shard cannot see is a hard error. One invocation, like the strict pass.
+    strategy: all
+    opt:
+      # The buf.validate rules, as JSONSchema keywords per field.
+      - openapi_configuration=gen/openapiv2/openapi_config.yaml
+      # An UNSPECIFIED member is what `enum.defined_only` excludes; dropping it
+      # here is the same narrowing the TypeScript overlay makes with Exclude.
+      - omit_enum_default_value=true
+      # protobufAny and rpcStatus are repeated into every file otherwise.
+      - disable_default_errors=true
+      # A sibling of $ref is dropped by strict validators, which is where the
+      # description of a message-typed field lands.
+      - use_allof_for_refs=true
+      - preserve_rpc_order=true
