@@ -129,7 +129,7 @@ StockMovementProductId = Annotated[
     "required",
     "string.uuid = true",
 ]
-StockMovementKind = Annotated[
+StockMovementKind_ = Annotated[
     StockMovementKind,
     "enum.defined_only = true",
     "enum.not_in = [0]",

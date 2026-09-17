@@ -59,7 +59,7 @@ ProductPrice = Annotated[
     _shop_common_v1_common_pb2.Money,
     "required",
 ]
-ProductStatus = Annotated[
+ProductStatus_ = Annotated[
     ProductStatus,
     "enum.defined_only = true",
 ]

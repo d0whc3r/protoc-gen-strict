@@ -235,7 +235,7 @@ export type PresenceRuleCoverageStrict = Require<Narrow<PresenceRuleCoverage, {
  *     this.window_end > this.window_start
  *     message: window_end must be after window_start
  *   cel[cel_coverage.slugs_lowercase]
- *     <unprintable expression>
+ *     this.slugs.all(s, s == s.lowerAscii())
  *     message: every slug must be lowercase
  *   cel[this.window_start >= 0]
  *     this.window_start >= 0

@@ -27,6 +27,10 @@ The alias name is the message name and the field name, so `User.email` is
 `UserEmail` and `Warehouse.Address.city` is `WarehouseAddressCity`. A field with
 no rules gets no alias.
 
+A name the file already re-exports gets a trailing underscore instead: the enum
+typing `Product.status` is itself named `ProductStatus`, so the alias is
+`ProductStatus_` and the class keeps the name protoc-gen-python gave it.
+
 A type from another file is reached through a module alias built from the whole
 proto path — `shop/common/v1/common.proto` is `_shop_common_v1_common_pb2`. The
 base name protoc-gen-pyi uses would collapse `a/common.proto` and

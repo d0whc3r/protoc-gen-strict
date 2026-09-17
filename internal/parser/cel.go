@@ -30,9 +30,14 @@ type CELRule struct {
 }
 
 // celEnv is built once. Parsing needs no declarations; `this` is declared to
-// keep the environment usable for a future type-check pass.
+// keep the environment usable for a type-check pass.
+//
+// Macro call tracking is what lets a conjunct be printed back as CEL. `all()`
+// and `exists()` parse into a comprehension, and without the macro calls in the
+// source info the unparser has no way back to the text the author wrote and
+// fails with "unsupported expression".
 var celEnv = sync.OnceValues(func() (*cel.Env, error) {
-	return cel.NewEnv(cel.Variable("this", cel.DynType))
+	return cel.NewEnv(cel.Variable("this", cel.DynType), cel.EnableMacroCallTracking())
 })
 
 // celRulesFrom parses both forms: the full `cel` rule, and the `cel_expression`
