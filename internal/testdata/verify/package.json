@@ -1,0 +1,9 @@
+{
+  "name": "protoc-gen-strict-verify",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@bufbuild/protobuf": "^2.15.0",
+    "typescript": "^5.9.0"
+  }
+}
