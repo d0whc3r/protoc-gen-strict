@@ -11,10 +11,10 @@ import {
 // mapped types the generated strict types are built from.
 //
 // A template literal type is the whole check: a literal of the right shape is
-// assignable and a misspelt one is not, with no constructor to call and nothing
+// assignable and a misspelt one is not, with nothing to construct and nothing
 // to brand. It is a shape check and nothing more — protovalidate stays the
 // authority on validity. A value only known at runtime is a bare `string`,
-// which no shape fits; that one needs a cast.
+// which fits no shape; that one needs a cast.
 
 /**
  * A string declared with `(buf.validate.field).string.uuid`, as far as a string
@@ -22,15 +22,12 @@ import {
  */
 export type Uuid = `${string}-${string}-${string}-${string}-${string}`;
 
-/**
- * A string declared with `(buf.validate.field).string.email`, likewise.
- */
+/** A string declared with `(buf.validate.field).string.email`, likewise. */
 export type Email = `${string}@${string}.${string}`;
 
 /**
- * Casts a runtime string to `Uuid`. The name says what it is: a type assertion
- * and nothing else. No check runs, and protovalidate stays the authority on
- * validity.
+ * Casts a runtime string to `Uuid`. A type assertion and nothing else: no check
+ * runs, and protovalidate stays the authority on validity.
  */
 export const asUuid = (value: string): Uuid => value as Uuid;
 
@@ -39,9 +36,9 @@ export const asEmail = (value: string): Email => value as Email;
 
 /**
  * Replaces the type of every property named in `M` and keeps the rest of `T`.
- * Optionality and readonly survive, so `{ createdAt?: Timestamp }` narrowed with
- * `{ createdAt: never }` becomes `{ createdAt?: never }`: the field may be
- * omitted, and nothing but `undefined` assigned to it.
+ * Homomorphic over `keyof T`, so optionality and readonly survive: a
+ * `{ createdAt?: Timestamp }` narrowed with `{ createdAt: never }` may still be
+ * omitted, and takes nothing but `undefined` when written.
  *
  * The constraint on `M` makes every override prove it narrows the property it
  * replaces, which is what the generated-output type-check tests the emitter with.
@@ -65,9 +62,9 @@ export type NonEmptyList<T extends readonly unknown[]> = [T[number], ...T[number
 // --- the constructor -------------------------------------------------------
 //
 // `create` from protobuf-es reports the shape type, so the narrowing never
-// reaches its caller. `createStrict` takes the same descriptor and the same
-// initializer, checks what that initializer literally says against the strict
-// type, and reports the strict type.
+// reaches its caller. `createStrict` takes the same descriptor and initializer,
+// checks what that initializer literally says against the strict type, and
+// reports the strict type.
 
 /** What `create` writes into a field the initializer omits. */
 type Default<T> = [T] extends [string]
@@ -89,14 +86,10 @@ type Generated = "$typeName" | "$unknown";
 
 /**
  * The keys an initializer has to carry: the ones a rule narrowed past the value
- * `create` would otherwise default them to. A map's index signature is not one.
- *
- * A rule that pins a field *to* that value is not one either. The read-only
- * fields of a create request are the case: `this.product.id == ''` narrows an
- * id to `Uuid & ""` and an enum to `Extract<Enum, 0>`, neither of which a
- * caller can write — the empty string fits no UUID shape and the zero member is
- * excluded. `create` already writes exactly what the rule asks for, so the key
- * is left out rather than demanded.
+ * `create` would otherwise default them to. A map's index signature is not one,
+ * and neither is a field a rule pins *to* that value — `this.product.id == ''`
+ * narrows an id to `Uuid & ""` and an enum to `Extract<Enum, 0>`, which no
+ * caller can write and `create` already writes.
  */
 type Needed<T> = string extends keyof T
   ? never
@@ -118,12 +111,11 @@ type Needed<T> = string extends keyof T
  * The two halves are separate because only the first can be homomorphic. A
  * mapped type over `keyof V` alone keeps V's `?` and `readonly` modifiers; one
  * over a computed key union drops them, which would demand every optional
- * property an initializer spreads in — a form value, or the `$unknown` a nested
- * message carries.
+ * property an initializer spreads in.
  *
- * The properties protoc-gen-es adds are passed through rather than checked: no
- * rule narrows them, and recursing into the `Uint8Array` inside `$unknown` costs
- * the checker more instantiations than the rest of a message tree put together.
+ * `$typeName` and `$unknown` pass through unchecked: no rule narrows them, and
+ * recursing into the `Uint8Array` inside `$unknown` costs the checker more
+ * instantiations than the rest of a message tree put together.
  */
 type Checked<V, T> = T extends readonly (infer Item)[]
   ? V extends readonly (infer Written)[]
@@ -139,10 +131,9 @@ type Checked<V, T> = T extends readonly (infer Item)[]
 
 /**
  * One property. An omitted key arrives as `undefined`, so a `Needed` key the
- * initializer left out lands on a branch that rejects it.
- *
- * A field a rule pinned to the value `create` writes takes only that value, so
- * `id: ""` on a create request is accepted and anything else is not.
+ * initializer left out lands on a branch that rejects it. A field a rule pinned
+ * to the value `create` writes takes only that value: `id: ""` on a create
+ * request is accepted and anything else is not.
  */
 type CheckedValue<V, T> = undefined extends T
   ? V extends undefined
@@ -162,7 +153,6 @@ type CheckedValue<V, T> = undefined extends T
 
 /**
  * Creates a message and reports its strict type, given a `<Name>StrictSchema`.
- *
  * The initializer is protobuf-es's own, with each value checked against what
  * the rules narrowed the field to: a string literal is accepted where the
  * compiler can see it fits the shape, and a bare `string` is not.
