@@ -1,9 +1,58 @@
 # Rule coverage: TypeScript
 
-Which `buf.validate` rules become part of the generated TypeScript types, what
-they turn into, and what is left to runtime validation.
+What the TypeScript overlay emits, which `buf.validate` rules become part of the
+generated types, what each turns into, and what is left to runtime validation.
 
 ← [Rule coverage](rule-coverage.md) · [README](../README.md)
+
+## What it emits
+
+Per `.proto` file, one `<file>.strict.ts` next to the `protoc-gen-es` output:
+
+- **`<Message>Strict`** — the generated type with its constrained fields
+  narrowed. Narrowing reaches through message-typed fields, singular and
+  repeated, so a response type's item list narrows along with it.
+- **`<Enum>Strict`** — the generated enum without its zero member; see
+  [Enums: the excluded zero](#enums-the-excluded-zero).
+- **`<Message>StrictSchema`** — the *same* descriptor object, re-annotated so
+  its valid-type slot reports the strict type:
+
+  ```ts
+  export const CreateProductRequestStrictSchema =
+    CreateProductRequestSchema as GenMessage<CreateProductRequest, { validType: CreateProductRequestStrict }>;
+  ```
+
+  Consumers of a Connect or gRPC client rarely name a request type: they hold a
+  descriptor and read the shape off it through `MessageValidType`. Retyping the
+  descriptor is how the narrowing reaches a call site that never writes the type
+  down. It is also what `createStrict` builds from, so every message that
+  narrows gets one.
+- **`<Service>Strict`** — the generated service descriptor, retyped so every
+  method points at the strict input and output schema.
+
+Plus **`strict/types.ts`**, once per generation: the string shape types and the
+mapped types every narrowing is built from.
+
+Because the schemas are the objects `protoc-gen-es` produced, re-annotated
+rather than rebuilt, runtime identity is unchanged: adopting a strict import
+cannot change what goes over the network or split a query cache.
+
+### Building a message
+
+`createStrict` only needs the fields that `create` would otherwise default past
+the narrowing. A field a rule pins *to* that default — the read-only fields of a
+create request, `this.product.id == ''` and its siblings — can be left out,
+since `create` already writes exactly what the rule asks for:
+
+```ts
+const created = createStrict(CreateProductRequestStrictSchema, {
+  product: { sku: "ABC-1", name: "widget", price, status: ProductStatus.ACTIVE },
+});                       // no id, no createdAt, no labels — create() writes them
+```
+
+A value only known at runtime is a bare `string`, which fits no shape. There is
+no constructor to call: cast it — `id: fromForm as Uuid` — and let protovalidate
+be the authority on whether it really is one.
 
 ## The building blocks
 

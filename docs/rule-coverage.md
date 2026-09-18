@@ -1,7 +1,7 @@
 # Rule coverage
 
-What the plugin does with each `buf.validate` rule, and where the per-target
-detail lives.
+What the plugin reads, what it does with each `buf.validate` rule, where the
+per-target detail lives, and what it does not carry.
 
 ← [README](../README.md)
 
@@ -47,6 +47,39 @@ since protoc-gen-openapiv2 already reads it.
 The two overlays never drop a rule without saying so, which is what makes them
 the readable record. OpenAPI is the exception by format, so a rule it cannot
 express is only visible in the TypeScript or Python output.
+
+## What the parser reads
+
+- **Every standard `buf.validate` rule.** Constraints are read reflectively, so
+  a new protovalidate rule comes through without a code change — as documentation
+  where it has no equivalent in the target.
+- **Custom CEL rules**, both the full `(buf.validate.field).cel` form and the
+  `cel_expression` shorthand. Message-level rules become narrowings where their
+  shape allows it; see [TypeScript](rule-coverage-typescript.md#message-rules-bufvalidatemessagecel).
+- **`oneof` exclusivity**, both real `oneof` blocks and
+  `(buf.validate.message).oneof` declarations.
+- **Nested messages**, including those declared inside another message.
+- **`(google.api.field_behavior) = OUTPUT_ONLY`**, as described above.
+
+A CEL expression that fails to parse is reported inline as
+`cel[...] UNPARSEABLE: <reason>`. One broken rule does not abort generation for
+the rest of the file.
+
+## Current limitations
+
+- Python carries only the bounds and lengths `annotated_types` spells; every
+  other rule is a string there, and nothing reads it.
+- `repeated.min_items = 3` narrows to "not empty", not to a 3-element tuple.
+- Rules on `repeated.items` describe the element; the element type is left alone.
+- A field with `ignore` set gets no narrowing at all, since under-narrowing is
+  the safe direction.
+- The OpenAPI config carries no CEL, enum, `oneof` or `required` rule, and a
+  swagger has no comment to name what was dropped. The zero enum member is still
+  dropped there, by protoc-gen-openapiv2's own `omit_enum_default_value=true`.
+- The Python overlay carries the excluded zero as the enum's own alias. A bare
+  enum field, and any field whose enum comes from another proto file, keeps the
+  class protoc-gen-python declared.
+- Only TypeScript, Python and OpenAPI. Another target means another generator.
 
 ## Adding a narrowing
 
