@@ -116,10 +116,6 @@ declares no `OUTPUT_ONLY` field of its own still gets the paths it reaches —
 …)`. A repeated or map field ends a path, since a FieldMask may not name a
 member of one.
 
-The TypeScript overlay makes the same field a `readonly` property. Python has
-nowhere to put that: the message class comes from a metaclass, and its
-attributes are writable whatever the alias says.
-
 ## Enums: the excluded zero
 
 The one alias no `buf.validate` rule produced. Every enum the run generates gets

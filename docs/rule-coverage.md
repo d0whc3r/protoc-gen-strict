@@ -27,10 +27,10 @@ protovalidate still validates everything at runtime, whatever the target. The
 overlay moves what it can to the compiler; it does not replace the validator.
 
 One annotation outside `buf.validate` is carried too:
-`(google.api.field_behavior) = OUTPUT_ONLY` becomes a `readonly` property in
-TypeScript and metadata text in Python, plus a `<Message>OutputOnlyFields` list
-of dotted proto paths in both — the subtree under a server-assigned message
-field included — for the code that has to subtract them from an update mask. The OpenAPI target leaves it alone,
+`(google.api.field_behavior) = OUTPUT_ONLY` becomes metadata text in Python and
+a `<Message>OutputOnlyFields` list of dotted proto paths in both TypeScript and
+Python — the subtree under a server-assigned message field included — for the
+code that has to subtract them from an update mask. The OpenAPI target leaves it alone,
 since protoc-gen-openapiv2 already reads it.
 
 ## Per target

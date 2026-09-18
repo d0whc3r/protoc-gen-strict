@@ -27,6 +27,7 @@ import type {
   StockMovementKindStrict,
   StockMovementStrict,
 } from "./gen/typescript/shop/inventory/v1/warehouse.strict";
+import { WarehouseStrictSchema } from "./gen/typescript/shop/inventory/v1/warehouse.strict";
 import { StockMovementKind } from "./gen/typescript/shop/inventory/v1/warehouse_pb";
 import type { ProductStatusStrict } from "./gen/typescript/shop/catalog/v1/product.strict";
 import type { MoneyStrict } from "./gen/typescript/shop/common/v1/common.strict";
@@ -97,17 +98,11 @@ type _RequiredType = Expect<Extends<ProductStrict["price"], MoneyStrict>>;
 type _StillOptional = Expect<Optional<ProductStrict, "description">>;
 
 // --- server-assigned fields ------------------------------------------------
-// (google.api.field_behavior) = OUTPUT_ONLY makes the property readonly and
-// changes nothing else: the value keeps the type protoc-gen-es gave it, and an
-// optional field stays optional.
-declare const _product: ProductStrict;
-// @ts-expect-error id is OUTPUT_ONLY, so the server is the only writer
-_product.id = _product.id;
-// A field with no field_behavior stays writable.
-_product.sku = _product.sku;
+// (google.api.field_behavior) = OUTPUT_ONLY changes no type: the field keeps
+// what protoc-gen-es gave it, optionality included.
 type _OutputOnlyStillOptional = Expect<Optional<ProductStrict, "publishedAt">>;
 
-// The same fields are listed apart from the type, under the proto names a
+// It is carried as a list apart from the type, under the proto names a
 // google.protobuf.FieldMask carries, so an update mask can subtract them.
 type _OutputOnlyField = (typeof ProductOutputOnlyFields)[number];
 type _OutputOnlyIsProtoName = Expect<Extends<"created_by_email", _OutputOnlyField>>;
@@ -312,3 +307,33 @@ declare const partialDraft: {
   status: ProductStatusStrict;
 };
 createStrict(CreateProductRequestStrictSchema, { product: partialDraft });
+
+// A repeated message field is checked item by item, against the strict type of
+// what the list holds rather than the list itself.
+const contact = { name: "ops", channel: { case: "email", value: "ops@example.com" } } as const;
+createStrict(WarehouseStrictSchema, {
+  id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  name: "main",
+  address: { line1: "a", city: "b", countryCode: "ES", postalCode: "08001" },
+  contacts: [contact],
+});
+createStrict(ListProductsRequestStrictSchema, {
+  pagination: page,
+  orderDirection: SortDirection.ASC,
+  // @ts-expect-error a repeated enum item may not be the zero member either
+  statuses: [ProductStatus.UNSPECIFIED],
+});
+
+// An optional message field the initializer does write is checked too: the `?`
+// is dropped first, so what is left is the field's own narrowing.
+createStrict(ListProductsRequestStrictSchema, {
+  pagination: page,
+  orderDirection: SortDirection.ASC,
+  minPrice: { currency: Currency.EUR, units: 1n, nanos: 0 },
+});
+createStrict(ListProductsRequestStrictSchema, {
+  pagination: page,
+  orderDirection: SortDirection.ASC,
+  // @ts-expect-error currency is an enum whose strict alias excludes the zero member
+  minPrice: { currency: Currency.UNSPECIFIED, units: 1n, nanos: 0 },
+});

@@ -59,16 +59,6 @@ export type Narrow<T, M extends { [K in keyof M]: K extends keyof T ? T[K] : nev
  */
 export type Require<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
-/**
- * Marks the properties named in `K` readonly, for the fields
- * `(google.api.field_behavior) = OUTPUT_ONLY` says the server assigns. Reading
- * one is unchanged; assigning to it is a compile error.
- *
- * `Narrow` cannot express it: it maps over `keyof T`, so every property keeps
- * the modifiers `T` declared whatever the override says.
- */
-export type Immutable<T, K extends keyof T> = Omit<T, K> & { readonly [P in K]: T[P] };
-
 /** A list a `repeated.min_items` rule guarantees is not empty. */
 export type NonEmptyList<T extends readonly unknown[]> = [T[number], ...T[number][]];
 

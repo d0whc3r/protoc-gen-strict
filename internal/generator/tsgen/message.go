@@ -115,7 +115,7 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 	name := f.shape(f.ctx.tsName(msg.Name))
 	strict := f.declare(f.ctx.strictName(msg.Name))
 	var props []tsProp
-	var required, readOnly []string
+	var required []string
 	var runtimeOnly []emit.RuntimeNote
 
 	tree := f.ctx.celTrees[msg.Name]
@@ -146,19 +146,10 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 		if n.Required || (node != nil && node.present) {
 			required = append(required, localName(field.Name))
 		}
-		// OUTPUT_ONLY is not a buf.validate rule and narrows no value: the
-		// server assigns the field, so the property is readonly rather than
-		// retyped.
-		if field.OutputOnly {
-			readOnly = append(readOnly, localName(field.Name))
-		}
 	}
 
-	// The wrappers, innermost first: Require<Immutable<Narrow<T, {...}>>>.
+	// The wrapper: Require<Narrow<T, {...}>, "a" | "b">.
 	before, after := "", ""
-	if len(readOnly) > 0 {
-		before, after = f.helper("Immutable")+"<", ", "+quotedUnion(readOnly)+">"
-	}
 	if len(required) > 0 {
 		before, after = f.helper("Require")+"<"+before, after+", "+quotedUnion(required)+">"
 	}
@@ -179,11 +170,10 @@ func (f *tsFile) message(msg parser.MessageMetadata) {
 }
 
 // outputOnlyFields emits `<Name>OutputOnlyFields`, the dotted proto paths of
-// the fields the server assigns. The readonly properties say the same thing to
-// the compiler, but only about this message's own fields; a caller that has to
-// name a field — a google.protobuf.FieldMask, a form, a diff — needs the paths
-// as values, nested ones included, and in the form a FieldMask carries them,
-// which is the proto name rather than the camelCase property.
+// the fields the server assigns. The type says nothing about them; a caller
+// that has to name a field — a google.protobuf.FieldMask, a form, a diff —
+// reads the paths as values, nested ones included, and in the form a FieldMask
+// carries them, which is the proto name rather than the camelCase property.
 func (f *tsFile) outputOnlyFields(msg parser.MessageMetadata) {
 	if len(msg.OutputOnlyPaths) == 0 {
 		return
@@ -192,8 +182,7 @@ func (f *tsFile) outputOnlyFields(msg parser.MessageMetadata) {
 		"Every field of " + msg.Name + " the server assigns: those declared",
 		"`(google.api.field_behavior) = OUTPUT_ONLY` and everything under one, since the",
 		"server owns the whole subtree. Dotted proto paths, so they can be subtracted from",
-		"a google.protobuf.FieldMask; the ones at the top level are readonly in " +
-			f.ctx.strictName(msg.Name) + ".",
+		"a google.protobuf.FieldMask.",
 	})
 	f.P("export const ", f.declare(f.ctx.tsName(msg.Name)+outputOnlyFieldsSuffix), " = [")
 	for _, path := range msg.OutputOnlyPaths {

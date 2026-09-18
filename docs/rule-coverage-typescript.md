@@ -19,7 +19,6 @@ Every narrowing is built from the exports of the generated `strict/types` module
 - **`Narrow<T, M>`**, which replaces the type of the named properties and keeps
   every other property of `T` as it is.
 - **`Require<T, K>`**, which is `T & Required<Pick<T, K>>`.
-- **`Immutable<T, K>`**, which is `Omit<T, K> & { readonly [P in K]: T[P] }`.
 - **`NonEmptyList<T>`**, the tuple `[T[number], ...T[number][]]`.
 - **`createStrict(schema, init)`**, which builds a message from a
   `<Message>StrictSchema` and reports its strict type. It checks the initializer
@@ -38,9 +37,8 @@ is homomorphic over `keyof T`, so optionality and readonly survive.
 Its constraint on `M` also makes every override prove it narrows the property it
 replaces, which is what `make verify` tests the emitter with.
 
-A message with any narrowing becomes `Narrow<<Message>, { ... }>`. Read-only and
-required fields wrap that result, innermost first:
-`Require<Immutable<Narrow<...>, "id">, "a" | "b">`.
+A message with any narrowing becomes `Narrow<<Message>, { ... }>`. Required
+fields wrap that result: `Require<Narrow<...>, "a" | "b">`.
 
 ## Field rules: `(buf.validate.field)`
 
@@ -211,24 +209,12 @@ with no union to constrain, so it is reported as left to runtime validation.
 
 The one annotation here that is not a `buf.validate` rule.
 `(google.api.field_behavior) = OUTPUT_ONLY` is AIP-203 for "the server assigns
-this, a caller must not set it", which is a `readonly` property:
+this, a caller must not set it".
 
-```ts
-export type ProductStrict = Require<Immutable<Narrow<Product, {
-  id: Uuid;
-}>, "id" | "createdAt" | "updatedAt">, "price">;
-```
-
-Reading the field is unchanged and the value keeps the type protoc-gen-es gave
-it; assigning to it is a compile error. An optional field stays optional —
-`Immutable` is homomorphic over `T`, like `Narrow`.
-
-`Narrow` alone cannot say it: it maps over `keyof T`, so every property keeps
-the modifiers `T` declared whatever the override says. Hence the second helper.
-
-The names are also emitted apart from the type, so code that has to *name* a
-field — a `google.protobuf.FieldMask`, a form, a diff — can read them. They are
-dotted proto paths, the form a FieldMask carries, not the camelCase property:
+It narrows no type: the field keeps whatever protoc-gen-es gave it, optionality
+included. It is carried as a list instead, so code that has to *name* a field —
+a `google.protobuf.FieldMask`, a form, a diff — can read it. Dotted proto paths,
+the form a FieldMask carries, not the camelCase property:
 
 ```ts
 export const ProductOutputOnlyFields = [
@@ -247,11 +233,10 @@ export const ProductOutputOnlyFields = [
 ] as const;
 ```
 
-The list goes deeper than the type does. `Immutable` can only speak about this
-message's own properties, but the server that assigns a message field assigns
-everything under it, and a mask path can name a member of it. So the list
-carries the whole subtree, and a message that declares no `OUTPUT_ONLY` field of
-its own still gets the paths it reaches through the ones it wraps:
+The server that assigns a message field assigns everything under it, and a mask
+path can name a member of it. So the list carries the whole subtree, and a
+message that declares no `OUTPUT_ONLY` field of its own still gets the paths it
+reaches through the ones it wraps:
 
 ```ts
 export const CreateProductRequestOutputOnlyFields = [
@@ -269,8 +254,7 @@ const paths = updateMask.paths.filter(
 );
 ```
 
-A field inside a `oneof` is listed too. Nothing can make one arm of a
-discriminated union readonly, so the list is the only place it shows.
+A field inside a `oneof` is listed too.
 
 The other `field_behavior` values are not carried. `REQUIRED` is
 `(buf.validate.field).required`'s job, and protovalidate is what enforces it;

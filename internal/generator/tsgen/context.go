@@ -137,7 +137,7 @@ func (c *Context) narrowsItself(msg parser.MessageMetadata) bool {
 		if field.OneofName != "" {
 			continue
 		}
-		if field.OutputOnly || !c.fieldNarrowing(field).isZero() {
+		if !c.fieldNarrowing(field).isZero() {
 			return true
 		}
 	}
