@@ -27,7 +27,7 @@ jobs:
       # release-please pushes the tag with GITHUB_TOKEN, and a tag pushed by
       # that token starts no further workflow, so the other workflow would
       # never fire.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: ${{ steps.release.outputs.release_created }}
         with:
           # GoReleaser reads the tag history to build the version.
