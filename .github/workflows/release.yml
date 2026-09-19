@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ steps.release.outputs.tag_name }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         if: ${{ steps.release.outputs.release_created }}
         with:
           go-version-file: go.mod
