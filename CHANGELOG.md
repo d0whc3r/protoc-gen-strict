@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.1...v1.1.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* Upgrade CI actions and CEL dependency versions ([7944468](https://github.com/d0whc3r/protoc-gen-strict/commit/79444688ec49eda4cd830199e4a8e59f129ab7e1))
+
 ## [1.1.1](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.0...v1.1.1) (2026-09-24)
 
 
