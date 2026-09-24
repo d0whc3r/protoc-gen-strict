@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.0...v1.1.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* lower go version to 1.26 ([2e562c4](https://github.com/d0whc3r/protoc-gen-strict/commit/2e562c4398fe389b485b296d0d7950a86f34cee0))
+
 ## [1.1.0](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.0.0...v1.1.0) (2026-09-18)
 
 
