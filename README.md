@@ -25,16 +25,20 @@ message DeleteProductRequest {
 
 ```ts
 // protoc-gen-es output — both rules are gone
-export type DeleteProductRequest = Message<"shop.catalog.v1.DeleteProductRequest"> & {
-  id: string;
-};
+export type DeleteProductRequest =
+  Message<"shop.catalog.v1.DeleteProductRequest"> & {
+    id: string;
+  };
 ```
 
 ```ts
 // protoc-gen-strict output — the rules that have a type equivalent are now typed
-export type DeleteProductRequestStrict = Narrow<DeleteProductRequest, {
-  id: Uuid;
-}>;
+export type DeleteProductRequestStrict = Narrow<
+  DeleteProductRequest,
+  {
+    id: Uuid;
+  }
+>;
 ```
 
 A rule with no type equivalent is named in the generated doc comment and left to
@@ -56,7 +60,7 @@ onto your `PATH` **under its own name**: protoc and buf resolve a plugin by
 looking for `protoc-gen-strict`, so renaming it breaks the lookup.
 
 Requires [`buf`](https://buf.build/docs/installation), plus Go 1.26+ if you
-install with `go install`.
+install with `go install`
 
 ## Configure
 
@@ -121,7 +125,12 @@ managed:
 plugins:
   # Local, not `remote:`. A BSR plugin runs on buf's servers, where
   # openapi_configuration has no local file to read.
-  - local: ["go", "run", "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest"]
+  - local:
+      [
+        "go",
+        "run",
+        "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest",
+      ]
     out: gen/openapiv2
     strategy: all
     opt:
@@ -153,15 +162,15 @@ gen/openapiv2/example/v1/user.swagger.json  protoc-gen-openapiv2, second pass
 
 Everything in `opt:`, and the two `buf.gen.yaml` settings the plugin depends on:
 
-| Setting | Where | Effect |
-|---|---|---|
-| `lang=typescript` | `opt:` | Emit only the TypeScript overlay, and the shared `strict/types.ts` with it |
-| `lang=python` | `opt:` | Emit only the Python overlay |
-| `lang=openapi` | `opt:` | Emit only `openapi_config.yaml`, the protoc-gen-openapiv2 field options |
-| `lang=` omitted | `opt:` | Emit all three, into one tree |
-| `paths=source_relative` | `opt:` | **Required.** Mirror the `.proto` directory layout in the output |
-| `strategy: all` | plugin entry | **Required.** One plugin process for the whole request, not one per directory |
-| `managed: enabled: true` | top level | **Required.** Supply a Go import path the plugin never emits but its framework insists on resolving |
+| Setting                  | Where        | Effect                                                                                              |
+| ------------------------ | ------------ | --------------------------------------------------------------------------------------------------- |
+| `lang=typescript`        | `opt:`       | Emit only the TypeScript overlay, and the shared `strict/types.ts` with it                          |
+| `lang=python`            | `opt:`       | Emit only the Python overlay                                                                        |
+| `lang=openapi`           | `opt:`       | Emit only `openapi_config.yaml`, the protoc-gen-openapiv2 field options                             |
+| `lang=` omitted          | `opt:`       | Emit all three, into one tree                                                                       |
+| `paths=source_relative`  | `opt:`       | **Required.** Mirror the `.proto` directory layout in the output                                    |
+| `strategy: all`          | plugin entry | **Required.** One plugin process for the whole request, not one per directory                       |
+| `managed: enabled: true` | top level    | **Required.** Supply a Go import path the plugin never emits but its framework insists on resolving |
 
 `lang=` is the plugin's own option; repeating it
 (`lang=typescript,lang=python`) selects both, and anything else fails the
@@ -233,29 +242,34 @@ import type { GenMessage } from "@bufbuild/protobuf/codegenv2";
  *   age
  *     int32.gt = 0
  */
-export type UserStrict = Narrow<User, {
-  /**
-   * required
-   * string.email = true
-   *
-   * Carried into the type: string.email.
-   */
-  email: Email;
-  /**
-   * repeated.min_items = 1
-   *
-   * Carried into the type: repeated.min_items.
-   */
-  roles: NonEmptyList<User["roles"]>;
-}>;
+export type UserStrict = Narrow<
+  User,
+  {
+    /**
+     * required
+     * string.email = true
+     *
+     * Carried into the type: string.email.
+     */
+    email: Email;
+    /**
+     * repeated.min_items = 1
+     *
+     * Carried into the type: repeated.min_items.
+     */
+    roles: NonEmptyList<User["roles"]>;
+  }
+>;
 
 /**
  * Describes example.v1.User, reporting UserStrict as its valid type.
  * The same descriptor protoc-gen-es generated, so the wire format and the identity
  * this has as a query key are unchanged — only what `MessageValidType` reports differs.
  */
-export const UserStrictSchema =
-  UserSchema as GenMessage<User, { validType: UserStrict }>;
+export const UserStrictSchema = UserSchema as GenMessage<
+  User,
+  { validType: UserStrict }
+>;
 ```
 
 `UserStrict` is assignable to `User`, so it goes straight into `create()`,
@@ -265,7 +279,7 @@ a request whose `id` carries `string.uuid`:
 
 ```ts
 const del = createStrict(DeleteProductRequestStrictSchema, {
-  id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",   // the literal fits the UUID shape
+  id: "3fa85f64-5717-4562-b3fc-2c963f66afa6", // the literal fits the UUID shape
 });
 ```
 
@@ -320,14 +334,14 @@ constrained field. See
 
 ## Documentation
 
-| Document | Covers |
-|---|---|
-| [Rule coverage](docs/rule-coverage.md) | What the plugin does with each rule, which target carries what, and the current limitations |
-| [Rule coverage: TypeScript](docs/rule-coverage-typescript.md) | Everything the TypeScript overlay emits, every narrowing, and the structural limits |
-| [Rule coverage: Python](docs/rule-coverage-python.md) | The `Annotated` aliases and how each TypeScript narrowing reads there |
-| [Rule coverage: OpenAPI](docs/rule-coverage-openapi.md) | The rules that reach the swagger, as JSONSchema keywords |
-| [Internals](docs/internals.md) | The pipeline, the intermediate representation, and how to add a narrowing |
-| [Contributing](CONTRIBUTING.md) | Build, test and release |
+| Document                                                      | Covers                                                                                      |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [Rule coverage](docs/rule-coverage.md)                        | What the plugin does with each rule, which target carries what, and the current limitations |
+| [Rule coverage: TypeScript](docs/rule-coverage-typescript.md) | Everything the TypeScript overlay emits, every narrowing, and the structural limits         |
+| [Rule coverage: Python](docs/rule-coverage-python.md)         | The `Annotated` aliases and how each TypeScript narrowing reads there                       |
+| [Rule coverage: OpenAPI](docs/rule-coverage-openapi.md)       | The rules that reach the swagger, as JSONSchema keywords                                    |
+| [Internals](docs/internals.md)                                | The pipeline, the intermediate representation, and how to add a narrowing                   |
+| [Contributing](CONTRIBUTING.md)                               | Build, test and release                                                                     |
 
 ## License
 
