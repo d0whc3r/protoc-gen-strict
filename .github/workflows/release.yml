@@ -15,7 +15,7 @@ jobs:
       # Reads the conventional commits landed since the last tag, and keeps a
       # release PR open with the next version and the CHANGELOG entry. Merging
       # that PR is what tags and releases.
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: release
         with:
           config-file: release-please-config.json
