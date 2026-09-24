@@ -9,10 +9,10 @@ package parser
 import (
 	"slices"
 
-	celast "github.com/google/cel-go/common/ast"
-	"github.com/google/cel-go/common/operators"
-	"github.com/google/cel-go/common/types/ref"
-	celparser "github.com/google/cel-go/parser"
+	celast "cel.dev/cel-go/common/ast"
+	"cel.dev/cel-go/common/operators"
+	"cel.dev/cel-go/common/types/ref"
+	celparser "cel.dev/cel-go/parser"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

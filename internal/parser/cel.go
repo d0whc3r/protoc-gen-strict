@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	validate "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/google/cel-go/cel"
-	celast "github.com/google/cel-go/common/ast"
+	"cel.dev/cel-go/cel"
+	celast "cel.dev/cel-go/common/ast"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
