@@ -22,7 +22,7 @@ jobs:
       # generated Python, so both toolchains have to be here.
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
