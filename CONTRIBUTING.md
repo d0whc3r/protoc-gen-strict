@@ -5,7 +5,7 @@ how to use it, see the [README](README.md).
 
 ## Setup
 
-Requires Go 1.27+ and [`buf`](https://buf.build/docs/installation). `make verify`
+Requires Go 1.26+ and [`buf`](https://buf.build/docs/installation). `make verify`
 also needs npm and python3.
 
 ```sh

@@ -1,6 +1,6 @@
 module github.com/d0whc3r/protoc-gen-strict
 
-go 1.27.1
+go 1.26.0
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2

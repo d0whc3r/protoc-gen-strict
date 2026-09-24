@@ -55,7 +55,7 @@ Or take a prebuilt binary for Linux, macOS or Windows from the
 onto your `PATH` **under its own name**: protoc and buf resolve a plugin by
 looking for `protoc-gen-strict`, so renaming it breaks the lookup.
 
-Requires [`buf`](https://buf.build/docs/installation), plus Go 1.27+ if you
+Requires [`buf`](https://buf.build/docs/installation), plus Go 1.26+ if you
 install with `go install`.
 
 ## Configure
