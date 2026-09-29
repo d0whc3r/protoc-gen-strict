@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.2...v1.1.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* Restructure entrypoint and standardize linting ([8b9ed9c](https://github.com/d0whc3r/protoc-gen-strict/commit/8b9ed9c77809aa95b273aa278b6151e18d52b173))
+
 ## [1.1.2](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.1...v1.1.2) (2026-09-24)
 
 
