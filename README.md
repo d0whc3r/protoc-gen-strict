@@ -48,7 +48,7 @@ shows up as a diff in your next `buf generate` instead of quietly disappearing.
 ## Install
 
 ```sh
-go install github.com/d0whc3r/protoc-gen-strict@latest
+go install github.com/d0whc3r/protoc-gen-strict/cmd/protoc-gen-strict@latest
 ```
 
 That puts `protoc-gen-strict` in `$(go env GOPATH)/bin`, which needs to be on

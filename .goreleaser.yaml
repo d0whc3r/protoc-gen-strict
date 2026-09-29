@@ -10,7 +10,8 @@ before:
     - go mod download
 
 builds:
-  - env:
+  - main: ./cmd/protoc-gen-strict
+    env:
       - CGO_ENABLED=0
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]

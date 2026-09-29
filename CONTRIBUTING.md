@@ -9,7 +9,7 @@ Requires Go 1.26+ and [`buf`](https://buf.build/docs/installation). `make verify
 also needs npm and python3.
 
 ```sh
-make tools      # install staticcheck, which `make lint` needs
+make bootstrap  # install the pinned golangci-lint into ./bin, which `make fmt` and `make lint` need
 make build      # produces ./bin/protoc-gen-strict
 ```
 
@@ -24,7 +24,7 @@ make snapshot   # build the release archives into ./dist, without tagging
 make clean      # remove bin/, gen/, dist/ and the verify scratch trees
 ```
 
-The plugin reads a `CodeGeneratorRequest` on stdin, so `go run .` with no stdin
+The plugin reads a `CodeGeneratorRequest` on stdin, so `go run ./cmd/protoc-gen-strict` with no stdin
 just hangs. That is not a bug; use `make generate`.
 
 ## Tests

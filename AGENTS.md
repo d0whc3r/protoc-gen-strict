@@ -10,7 +10,7 @@ protoc-gen-openapiv2. Rules that have an equivalent in the target become part of
 its output; the rest are named in the generated doc comment.
 
 ```
-main.go                       plugin entrypoint, protogen.Options{}.Run
+cmd/protoc-gen-strict         plugin entrypoint, protogen.Options{}.Run
 internal/parser               descriptors + buf.validate extensions → MessageMetadata (IR)
 internal/generator            parses, then dispatches to one emitter per target
 internal/generator/emit       what every emitter shares: rule comments, rule lookup, casing
@@ -97,9 +97,8 @@ Multi-step work → state the plan up front:
 **The checks, in order:**
 
 ```sh
-gofmt -l .          # must print nothing
-go vet ./...
-staticcheck ./...
+make fmt-check      # gofmt, goimports, gci: must print nothing
+make lint           # golangci-lint (.golangci.yaml, includes go vet and staticcheck), buf lint
 make test           # go test ./...
 ```
 
@@ -163,7 +162,7 @@ clean` removes them.
 - **Never panic on bad input.** Descriptor options are frequently nil and CEL expressions are frequently malformed. That's user input, not an invariant. A malformed expression is reported (`CELRule.ParseError`), not returned as an error and not a crash.
 - **Escape what you interpolate.** Proto comments, CEL source and string rule values land inside TypeScript and Python literals. Anything user-authored crossing into generated source gets escaped for that target language.
 - **Every target or none.** A rule the parser extracts but only TypeScript renders is a silent hole in the Python and OpenAPI output. Say so explicitly if you're deliberately leaving one behind.
-- **The plugin reads stdin.** protoc and buf drive it over a `CodeGeneratorRequest`. `go run .` with no stdin just hangs. That's not a bug; use `make generate`.
+- **The plugin reads stdin.** protoc and buf drive it over a `CodeGeneratorRequest`. `go run ./cmd/protoc-gen-strict` with no stdin just hangs. That's not a bug; use `make generate`.
 
 ## 8. Words
 

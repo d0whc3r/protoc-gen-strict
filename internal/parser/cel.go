@@ -85,7 +85,7 @@ func parseCEL(id, message, expression string) (CELRule, *cel.Ast, error) {
 	ast, issues := env.Parse(expression)
 	if issues != nil && issues.Err() != nil {
 		rule.ParseError = issues.Err().Error()
-		return rule, nil, nil
+		return rule, nil, nil //nolint:nilerr // malformed CEL is user input: reported, not returned
 	}
 
 	idents := map[string]struct{}{}

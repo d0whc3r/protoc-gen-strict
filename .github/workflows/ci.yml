@@ -33,11 +33,9 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # staticcheck, which `make lint` refuses to run without.
-      - run: make tools
-
-      # gofmt, go vet, staticcheck, buf lint, the hermetic golden tests, and a
-      # real end-to-end `buf generate` over ./proto.
+      # golangci-lint (installed by `make bootstrap` at the version the Makefile
+      # pins), buf lint, the hermetic golden tests, and a real end-to-end
+      # `buf generate` over ./proto.
       - run: make check
 
       # The only check that catches an overlay that no longer resolves: it

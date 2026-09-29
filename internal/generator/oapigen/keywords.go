@@ -59,12 +59,12 @@ func ruleKeywords(rule parser.Rule) []keyword {
 		return boundKeywords(leaf, rule.Value, kind)
 	}
 
-	switch {
-	case prefix == "string":
+	switch prefix {
+	case "string":
 		return stringKeywords(leaf, rule.Value)
-	case prefix == "repeated":
+	case "repeated":
 		return repeatedKeywords(leaf, rule.Value)
-	case prefix == "map":
+	case "map":
 		return mapKeywords(leaf, rule.Value)
 	}
 	return nil

@@ -20,6 +20,7 @@ import (
 // on.
 type TermKind string
 
+// The TermKind values, one per narrowing a generator can express.
 const (
 	TermEmpty    TermKind = "empty"    // the empty string
 	TermNonEmpty TermKind = "nonEmpty" // not the empty string

@@ -7,7 +7,7 @@ How the plugin works. For usage, see the [README](../README.md).
 ```mermaid
 flowchart TD
     buf["buf generate"]
-    main["main.go<br>protogen.Options{}.Run(generator.Run)"]
+    main["cmd/protoc-gen-strict<br>protogen.Options{}.Run(generator.Run)"]
     run["generator.Run<br>for each file marked Generate"]
     parse["parser.ParseFile<br>descriptors + buf.validate extensions<br>→ []MessageMetadata"]
     ts["tsgen.Write"]
