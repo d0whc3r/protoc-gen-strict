@@ -47,3 +47,11 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # proxy.golang.org caches the version list for up to 30 minutes, so
+      # `go install ...@latest` keeps resolving to the previous tag until it
+      # expires. Requesting the new tag by name makes the proxy add it now.
+      - if: ${{ steps.release.outputs.release_created }}
+        run: curl -fsS "https://proxy.golang.org/github.com/${GITHUB_REPOSITORY}/@v/${TAG}.info"
+        env:
+          TAG: ${{ steps.release.outputs.tag_name }}
