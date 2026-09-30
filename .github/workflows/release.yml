@@ -78,7 +78,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # npm provenance, and trusted publishing once it is set up per package.
+      # Trusted publishing: npm trades the OIDC token for a publish token, so
+      # no NPM_TOKEN secret. Also signs the provenance.
       id-token: write
     steps:
       # npm/publish.mjs, and the LICENSE and READMEs it packs.
@@ -100,5 +101,3 @@ jobs:
       # One package per command and platform, then the two command packages.
       # Skips every version already on npm, so a re-run resumes.
       - run: node npm/publish.mjs
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

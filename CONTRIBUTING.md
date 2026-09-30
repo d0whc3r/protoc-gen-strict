@@ -68,8 +68,10 @@ Linux, macOS and Windows on amd64 and arm64 and attaches them, with a
 A second job publishes the same binaries to npm: one package per command and
 platform holding the binary, and `@d0whc3r/protoc-gen-strict` and
 `@d0whc3r/protoc-gen-strict-schema`, whose `bin` runs the one npm installed. It
-authenticates with the `NPM_TOKEN` secret, and skips every version already on
-npm, so re-running a failed job resumes. See
+authenticates through npm trusted publishing (OIDC), with no token secret, and
+skips every version already on npm, so re-running a failed job resumes. A new
+package needs its first version published by hand and a trusted publisher
+(`npm trust github`) before this job can publish it. See
 [`npm/publish.mjs`](npm/publish.mjs).
 
 `make snapshot` runs the same build locally, into `./dist`, without tagging or
