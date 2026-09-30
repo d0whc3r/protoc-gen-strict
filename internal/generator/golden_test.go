@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -26,14 +27,19 @@ const (
 // every emitted file against its golden copy. It needs neither protoc nor buf:
 // `make testdata` builds the descriptor set and it is checked in.
 func TestGolden(t *testing.T) {
-	resp := generate(t, "")
+	compareGolden(t, generate(t, ""), goldenDir)
+}
 
+// compareGolden checks every emitted file against its golden copy under dir,
+// or rewrites the copies under -update.
+func compareGolden(t *testing.T, resp *pluginpb.CodeGeneratorResponse, dir string) {
+	t.Helper()
 	seen := map[string]bool{}
 	for _, file := range resp.GetFile() {
 		name := file.GetName()
 		seen[name] = true
 		t.Run(name, func(t *testing.T) {
-			path := filepath.Join(goldenDir, filepath.FromSlash(name))
+			path := filepath.Join(dir, filepath.FromSlash(name))
 			if *update {
 				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 					t.Fatal(err)
@@ -58,7 +64,7 @@ func TestGolden(t *testing.T) {
 	if *update {
 		return
 	}
-	for _, name := range goldenFiles(t) {
+	for _, name := range goldenFiles(t, dir) {
 		if !seen[name] {
 			t.Errorf("golden file %s has no corresponding generated output", name)
 		}
@@ -129,13 +135,21 @@ func TestUnknownOption(t *testing.T) {
 // generate runs the real plugin entry point over the descriptor set.
 func generate(t *testing.T, param string) *pluginpb.CodeGeneratorResponse {
 	t.Helper()
+	var opts generator.Options
+	return respond(t, param, opts.Set, func(gen *protogen.Plugin) error { return generator.Run(gen, opts) })
+}
+
+// respond builds the CodeGeneratorRequest buf would send for the descriptor
+// set, runs one plugin over it, and returns its response.
+func respond(t *testing.T, param string, set func(name, value string) error, run func(*protogen.Plugin) error) *pluginpb.CodeGeneratorResponse {
+	t.Helper()
 
 	raw, err := os.ReadFile(descriptorSet)
 	if err != nil {
 		t.Fatalf("read descriptor set (run `make testdata`): %v", err)
 	}
-	var set descriptorpb.FileDescriptorSet
-	if err := proto.Unmarshal(raw, &set); err != nil {
+	var descriptors descriptorpb.FileDescriptorSet
+	if err := proto.Unmarshal(raw, &descriptors); err != nil {
 		t.Fatalf("unmarshal descriptor set: %v", err)
 	}
 
@@ -144,7 +158,7 @@ func generate(t *testing.T, param string) *pluginpb.CodeGeneratorResponse {
 	if param != "" {
 		params = append(params, param)
 	}
-	for _, file := range set.GetFile() {
+	for _, file := range descriptors.GetFile() {
 		if isDependency(file.GetName()) {
 			continue
 		}
@@ -157,17 +171,16 @@ func generate(t *testing.T, param string) *pluginpb.CodeGeneratorResponse {
 		t.Fatal("descriptor set contains no target files")
 	}
 
-	var opts generator.Options
-	gen, err := protogen.Options{ParamFunc: opts.Set}.New(&pluginpb.CodeGeneratorRequest{
+	gen, err := protogen.Options{ParamFunc: set}.New(&pluginpb.CodeGeneratorRequest{
 		FileToGenerate: targets,
 		Parameter:      proto.String(strings.Join(params, ",")),
-		ProtoFile:      set.GetFile(),
+		ProtoFile:      descriptors.GetFile(),
 	})
 	if err != nil {
 		t.Fatalf("build protogen plugin: %v", err)
 	}
-	if err := generator.Run(gen, opts); err != nil {
-		t.Fatalf("generator.Run: %v", err)
+	if err := run(gen); err != nil {
+		t.Fatalf("run plugin: %v", err)
 	}
 	resp := gen.Response()
 	if resp.Error != nil {
@@ -182,16 +195,16 @@ func isDependency(name string) bool {
 	return strings.HasPrefix(name, "google/") || strings.HasPrefix(name, "buf/")
 }
 
-// goldenFiles lists every checked-in golden file, as a slash path relative to
-// the golden directory — the name the generator would have emitted it under.
-func goldenFiles(t *testing.T) []string {
+// goldenFiles lists every checked-in golden file under dir, as a slash path
+// relative to it — the name the generator would have emitted it under.
+func goldenFiles(t *testing.T, dir string) []string {
 	t.Helper()
 	var names []string
-	err := filepath.WalkDir(goldenDir, func(path string, entry os.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil || entry.IsDir() {
 			return err
 		}
-		rel, err := filepath.Rel(goldenDir, path)
+		rel, err := filepath.Rel(dir, path)
 		if err != nil {
 			return err
 		}
@@ -202,4 +215,35 @@ func goldenFiles(t *testing.T) []string {
 		t.Fatalf("walk golden dir: %v", err)
 	}
 	return names
+}
+
+// TestOutputPaths checks the outputs mirror the proto path whatever `paths=`
+// says. Under protogen's default, paths=import, a file would otherwise land
+// under its Go import path, example.test/... here and github.com/... in a real
+// repo, away from the protoc-gen-es module it imports.
+func TestOutputPaths(t *testing.T) {
+	names := func(resp *pluginpb.CodeGeneratorResponse) []string {
+		var out []string
+		for _, file := range resp.GetFile() {
+			out = append(out, file.GetName())
+		}
+		slices.Sort(out)
+		return out
+	}
+	for _, plugin := range []struct {
+		name string
+		run  func(t *testing.T, param string) *pluginpb.CodeGeneratorResponse
+	}{
+		{"protoc-gen-strict", generate},
+		{"protoc-gen-strict-schema", generateSchema},
+	} {
+		t.Run(plugin.name, func(t *testing.T) {
+			want := names(plugin.run(t, ""))
+			// The last `paths=` wins, so this overrides the harness's own.
+			got := names(plugin.run(t, "paths=import"))
+			if !slices.Equal(got, want) {
+				t.Errorf("paths=import emitted\n%q\nwant\n%q", got, want)
+			}
+		})
+	}
 }

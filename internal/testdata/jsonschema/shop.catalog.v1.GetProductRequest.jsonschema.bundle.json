@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "shop.catalog.v1.GetProductRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "GetProductRequest looks a product up by id or by SKU.",
+      "properties": {
+        "id": {
+          "description": "Look up by server-assigned id.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        },
+        "sku": {
+          "description": "Look up by stock keeping unit.",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "title": "Get Product Request",
+      "type": "object"
+    }
+  },
+  "$id": "shop.catalog.v1.GetProductRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.catalog.v1.GetProductRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

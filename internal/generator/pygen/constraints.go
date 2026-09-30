@@ -56,11 +56,14 @@ func (p *pyImports) metadataOf(field parser.FieldMetadata) []string {
 	if field.Required {
 		out = append(out, strconv.Quote(emit.RequiredRule))
 	}
+	if line := emit.ImpliedIgnore(field); line != "" {
+		out = append(out, strconv.Quote(line))
+	}
 
 	// `ignore` says the sibling rules do not always apply, so none of them
 	// describes the type either — the call the other targets make too. A
 	// reversed range is dropped for the reason emit.ReversedBounds gives.
-	_, ignored := emit.RuleValue(field, emit.IgnoreRule)
+	ignored := field.Ignore != ""
 	reversed := emit.ReversedBounds(field.Rules)
 
 	for _, rule := range field.Rules {
@@ -89,8 +92,10 @@ func (p *pyImports) constraints(rule parser.Rule) []string {
 	if exactLengths[rule.Kind] {
 		return p.calls(rule.Value, "MinLen", "MaxLen")
 	}
-	_, leaf, ok := strings.Cut(rule.Kind, ".")
-	if !ok {
+	typ, leaf, ok := strings.Cut(rule.Kind, ".")
+	// A float field reads back as the float32 widened to a double
+	// (0.10000000149011612), which a bound written as 0.1 would reject.
+	if !ok || typ == "float" {
 		return nil
 	}
 	if name, ok := boundConstraints[leaf]; ok {

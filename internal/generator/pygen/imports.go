@@ -51,26 +51,39 @@ func newPyImports(self string) *pyImports {
 
 // typeOf renders the Python type of a field, ignoring the rules attached to it.
 func (p *pyImports) typeOf(field parser.FieldMetadata) string {
+	// `ignore` admits the zero value, so the field keeps the plain enum rather
+	// than its strict alias, as in the TypeScript overlay.
+	base := p.strict
+	if field.Ignore != "" {
+		base = p.base
+	}
+
 	p.typing["Annotated"] = true
 	switch {
 	case field.IsMap:
 		p.abc["Mapping"] = true
-		return "Mapping[" + p.base(field.MapKey, parser.TypeRef{}) + ", " + p.base(field.MapValue, field.MapValType) + "]"
+		return "Mapping[" + p.base(field.MapKey, parser.TypeRef{}) + ", " + base(field.MapValue, field.MapValType) + "]"
 	case field.Repeated:
 		// protoc-gen-pyi declares these as Repeated{Scalar,Composite}FieldContainer,
 		// both MutableSequence subclasses.
 		p.abc["Sequence"] = true
-		return "Sequence[" + p.base(field.ProtoType, field.Type) + "]"
+		return "Sequence[" + base(field.ProtoType, field.Type) + "]"
 	default:
-		return p.base(field.ProtoType, field.Type)
+		return base(field.ProtoType, field.Type)
 	}
+}
+
+// strict is base, with an enum declared in this file replaced by its strict
+// alias.
+func (p *pyImports) strict(protoType string, ref parser.TypeRef) string {
+	if alias, ok := p.enumStrict[protoType]; ok && ref.Name != "" {
+		return alias
+	}
+	return p.base(protoType, ref)
 }
 
 func (p *pyImports) base(protoType string, ref parser.TypeRef) string {
 	if ref.Name != "" {
-		if alias, ok := p.enumStrict[protoType]; ok {
-			return alias
-		}
 		if ref.File == p.self {
 			p.symbols[topLevel(ref.Name)] = true
 			return ref.Name

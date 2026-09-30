@@ -9,10 +9,6 @@ import (
 	"github.com/d0whc3r/protoc-gen-strict/internal/parser"
 )
 
-// ignoreAlways is the protovalidate mode that skips a field entirely, nested
-// message included.
-const ignoreAlways = "IGNORE_ALWAYS"
-
 // narrowing is what one field contributes to its message's strict type. The
 // zero value means the field is left exactly as protoc-gen-es declared it.
 type narrowing struct {
@@ -44,7 +40,7 @@ func (c *Context) fieldNarrowing(field parser.FieldMetadata) narrowing {
 	// which leaves min_len and min_items saying nothing and turns the rest into
 	// a union with the zero. Dropped and reported instead, since under-narrowing
 	// is the safe direction; widen per rule if a schema needs it.
-	if _, ok := emit.RuleValue(field, emit.IgnoreRule); ok {
+	if field.Ignore != "" {
 		return n
 	}
 
@@ -129,7 +125,7 @@ func (c *Context) narrowingOf(field parser.FieldMetadata) narrowing {
 	// field carries, not only the rules written beside it, so the target's
 	// strict type does not describe this field either. Requiring it would
 	// reject a message protovalidate accepts.
-	if value, _ := emit.RuleValue(field, emit.IgnoreRule); value == ignoreAlways {
+	if field.Ignore == emit.IgnoreAlways {
 		return n
 	}
 	if target, ok := messageTarget(field); ok && c.needsStrict[target] {

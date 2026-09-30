@@ -1,0 +1,39 @@
+{
+  "$defs": {
+    "shop.schema.v1.Ping.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Ping and Pong refer to each other: a cycle across two messages.",
+      "properties": {
+        "note": {
+          "default": "",
+          "description": "A rule inside the cycle.",
+          "maxLength": 140,
+          "type": "string"
+        },
+        "pong": {
+          "$ref": "#/$defs/shop.schema.v1.Pong.jsonschema.json",
+          "description": "Closes the cycle."
+        }
+      },
+      "title": "Ping",
+      "type": "object"
+    },
+    "shop.schema.v1.Pong.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Pong is the other half of the Ping cycle.",
+      "properties": {
+        "ping": {
+          "$ref": "#/$defs/shop.schema.v1.Ping.jsonschema.json",
+          "description": "Closes the cycle."
+        }
+      },
+      "title": "Pong",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.Pong.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.Pong.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

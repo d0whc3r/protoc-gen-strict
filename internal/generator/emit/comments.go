@@ -43,10 +43,11 @@ func OneofLine(oneof parser.OneofMetadata) string {
 	if oneof.Name != "" {
 		label = "oneof " + oneof.Name
 	}
+	count := "at most one of"
 	if oneof.Required {
-		label = "required " + label
+		label, count = "required "+label, "exactly one of"
 	}
-	return fmt.Sprintf("%s: exactly one of %s", label, strings.Join(oneof.Fields, ", "))
+	return fmt.Sprintf("%s: %s %s", label, count, strings.Join(oneof.Fields, ", "))
 }
 
 // RuleComments renders a field's constraints as plain comment lines.
@@ -55,10 +56,27 @@ func RuleComments(field parser.FieldMetadata) []string {
 	if field.Required {
 		lines = append(lines, RequiredRule)
 	}
+	if line := ImpliedIgnore(field); line != "" {
+		lines = append(lines, line)
+	}
 	for _, rule := range field.Rules {
 		lines = append(lines, RuleLine(rule))
 	}
 	return append(lines, CELComments(field.CEL)...)
+}
+
+// ImpliedIgnore names an `ignore` the proto does not spell out: the
+// IGNORE_IF_ZERO_VALUE protovalidate gives a member of a
+// `(buf.validate.message).oneof`, which the parser records as Ignore. It is ""
+// when the field sets its own, or has no rule for it to affect.
+func ImpliedIgnore(field parser.FieldMetadata) string {
+	if field.Ignore == "" || (!field.Required && len(field.Rules) == 0 && len(field.CEL) == 0) {
+		return ""
+	}
+	if _, explicit := RuleValue(field, IgnoreRule); explicit {
+		return ""
+	}
+	return IgnoreRule + " = " + field.Ignore + " (implied by the message oneof)"
 }
 
 // CELComments renders CEL rules, field- and message-level, with what the parsed

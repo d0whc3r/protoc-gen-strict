@@ -1,0 +1,359 @@
+{
+  "$defs": {
+    "google.protobuf.Any.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "title": "Any",
+      "type": "object"
+    },
+    "google.protobuf.BoolValue.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "description": "The bool value.",
+      "title": "Bool Value",
+      "type": "boolean"
+    },
+    "google.protobuf.BytesValue.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "description": "The bytes value.",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+      "title": "Bytes Value",
+      "type": "string"
+    },
+    "google.protobuf.DoubleValue.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "enum": [
+            "Infinity",
+            "-Infinity",
+            "NaN"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "The double value.",
+      "title": "Double Value"
+    },
+    "google.protobuf.Duration.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "duration",
+      "title": "Duration",
+      "type": "string"
+    },
+    "google.protobuf.Empty.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "service Foo {\n       rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);\n     }",
+      "properties": {},
+      "title": "A generic empty message that you can re-use to avoid defining duplicated\n empty messages in your APIs. A typical example is to use it as the request\n or the response type of an API method. For instance:",
+      "type": "object"
+    },
+    "google.protobuf.FieldMask.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Field Mask",
+      "type": "string"
+    },
+    "google.protobuf.FloatValue.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "maximum": 3.4028234663852886e+38,
+          "minimum": -3.4028234663852886e+38,
+          "type": "number"
+        },
+        {
+          "enum": [
+            "Infinity",
+            "-Infinity",
+            "NaN"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "The float value.",
+      "title": "Float Value"
+    },
+    "google.protobuf.Int32Value.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "description": "The int32 value.",
+      "title": "Int32 Value"
+    },
+    "google.protobuf.Int64Value.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "description": "The int64 value.",
+      "title": "Int64 Value"
+    },
+    "google.protobuf.ListValue.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "List Value",
+      "type": "array"
+    },
+    "google.protobuf.StringValue.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "description": "The string value.",
+      "title": "String Value",
+      "type": "string"
+    },
+    "google.protobuf.Struct.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Struct",
+      "type": "object"
+    },
+    "google.protobuf.Timestamp.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "google.protobuf.UInt32Value.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "maximum": 4294967295,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "description": "The uint32 value.",
+      "title": "U Int32 Value"
+    },
+    "google.protobuf.UInt64Value.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "description": "The uint64 value.",
+      "title": "U Int64 Value"
+    },
+    "google.protobuf.Value.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Value"
+    },
+    "shop.schema.v1.WellKnownCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "WellKnownCoverage has one field per well-known type the JSON shape maps.",
+      "patternProperties": {
+        "^(big_count)$": {
+          "$ref": "#/$defs/google.protobuf.Int64Value.jsonschema.json",
+          "description": "A JSON string, as int64."
+        },
+        "^(big_unsigned)$": {
+          "$ref": "#/$defs/google.protobuf.UInt64Value.jsonschema.json",
+          "description": "A JSON string, as uint64."
+        },
+        "^(checked_null)$": {
+          "anyOf": [
+            {
+              "pattern": "^NULL_VALUE$",
+              "type": "string"
+            },
+            {
+              "maximum": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "An enum rule on NullValue, whose only JSON form is null.",
+          "title": "Null Value"
+        },
+        "^(created_at)$": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "No rule."
+        },
+        "^(expires_at)$": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Must be in the future, against the client's clock."
+        },
+        "^(null_value)$": {
+          "anyOf": [
+            {
+              "pattern": "^NULL_VALUE$",
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "An enum whose only JSON form is null.",
+          "title": "Null Value"
+        },
+        "^(small_count)$": {
+          "$ref": "#/$defs/google.protobuf.Int32Value.jsonschema.json",
+          "description": "A JSON number, as int32."
+        },
+        "^(small_ratio)$": {
+          "$ref": "#/$defs/google.protobuf.FloatValue.jsonschema.json",
+          "description": "A JSON number or \"NaN\", \"Infinity\", \"-Infinity\", as float."
+        },
+        "^(unsigned_count)$": {
+          "$ref": "#/$defs/google.protobuf.UInt32Value.jsonschema.json",
+          "description": "A JSON number, as uint32."
+        },
+        "^(update_mask)$": {
+          "$ref": "#/$defs/google.protobuf.FieldMask.jsonschema.json",
+          "description": "A JSON string of comma-separated paths."
+        }
+      },
+      "properties": {
+        "bigCount": {
+          "$ref": "#/$defs/google.protobuf.Int64Value.jsonschema.json",
+          "description": "A JSON string, as int64."
+        },
+        "bigUnsigned": {
+          "$ref": "#/$defs/google.protobuf.UInt64Value.jsonschema.json",
+          "description": "A JSON string, as uint64."
+        },
+        "blob": {
+          "$ref": "#/$defs/google.protobuf.BytesValue.jsonschema.json",
+          "description": "Base64, as bytes."
+        },
+        "checkedNull": {
+          "anyOf": [
+            {
+              "pattern": "^NULL_VALUE$",
+              "type": "string"
+            },
+            {
+              "maximum": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "An enum rule on NullValue, whose only JSON form is null.",
+          "title": "Null Value"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "No rule."
+        },
+        "detail": {
+          "$ref": "#/$defs/google.protobuf.Any.jsonschema.json",
+          "description": "Any restricted to a set of type URLs."
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Must be in the future, against the client's clock."
+        },
+        "flag": {
+          "$ref": "#/$defs/google.protobuf.BoolValue.jsonschema.json",
+          "description": "A JSON boolean."
+        },
+        "label": {
+          "$ref": "#/$defs/google.protobuf.StringValue.jsonschema.json",
+          "description": "A rule on a wrapper applies to the wrapped value."
+        },
+        "list": {
+          "$ref": "#/$defs/google.protobuf.ListValue.jsonschema.json",
+          "description": "A JSON array."
+        },
+        "metadata": {
+          "$ref": "#/$defs/google.protobuf.Struct.jsonschema.json",
+          "description": "A JSON object."
+        },
+        "nothing": {
+          "$ref": "#/$defs/google.protobuf.Empty.jsonschema.json",
+          "description": "An empty JSON object."
+        },
+        "nullValue": {
+          "anyOf": [
+            {
+              "pattern": "^NULL_VALUE$",
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "An enum whose only JSON form is null.",
+          "title": "Null Value"
+        },
+        "ratio": {
+          "$ref": "#/$defs/google.protobuf.DoubleValue.jsonschema.json",
+          "description": "A JSON number or \"NaN\", \"Infinity\", \"-Infinity\"."
+        },
+        "smallCount": {
+          "$ref": "#/$defs/google.protobuf.Int32Value.jsonschema.json",
+          "description": "A JSON number, as int32."
+        },
+        "smallRatio": {
+          "$ref": "#/$defs/google.protobuf.FloatValue.jsonschema.json",
+          "description": "A JSON number or \"NaN\", \"Infinity\", \"-Infinity\", as float."
+        },
+        "timeout": {
+          "$ref": "#/$defs/google.protobuf.Duration.jsonschema.json",
+          "description": "Bounded duration, a JSON string like \"1.5s\"."
+        },
+        "unsignedCount": {
+          "$ref": "#/$defs/google.protobuf.UInt32Value.jsonschema.json",
+          "description": "A JSON number, as uint32."
+        },
+        "updateMask": {
+          "$ref": "#/$defs/google.protobuf.FieldMask.jsonschema.json",
+          "description": "A JSON string of comma-separated paths."
+        },
+        "value": {
+          "$ref": "#/$defs/google.protobuf.Value.jsonschema.json",
+          "description": "Any JSON value."
+        }
+      },
+      "title": "Well Known Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.WellKnownCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.WellKnownCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

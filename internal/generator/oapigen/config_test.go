@@ -24,7 +24,8 @@ func TestZeroBoundNeverHalfWritten(t *testing.T) {
 		{"int gte zero", parser.Rule{Kind: "int32.gte", Value: "0"}, nil},
 		{"int lte zero", parser.Rule{Kind: "uint32.lte", Value: "0"}, nil},
 		{"int gte nonzero", parser.Rule{Kind: "int32.gte", Value: "-128"}, []keyword{{"minimum", "-128"}}},
-		{"float gt zero", parser.Rule{Kind: "float.gt", Value: "0"}, nil},
+		{"fractional gt zero", parser.Rule{Kind: "double.gt", Value: "0"}, nil},
+		{"float not carried", parser.Rule{Kind: "float.lte", Value: "0.1"}, nil},
 		{"float gt nonzero", parser.Rule{Kind: "double.gt", Value: "1.5"}, []keyword{{"minimum", "1.5"}, {"exclusiveMinimum", "true"}}},
 	}
 

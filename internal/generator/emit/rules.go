@@ -12,6 +12,10 @@ import (
 // at all. It sits next to them, both on a field and under `repeated.items`.
 const IgnoreRule = "ignore"
 
+// IgnoreAlways is the IgnoreRule value that skips a field entirely, nested
+// message included.
+const IgnoreAlways = "IGNORE_ALWAYS"
+
 // RequiredRule is `(buf.validate.field).required`, which the parser lifts out of
 // the rule list into a flag of its own.
 const RequiredRule = "required"

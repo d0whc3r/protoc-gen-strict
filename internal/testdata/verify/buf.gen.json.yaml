@@ -1,0 +1,17 @@
+# The <Message>Json types the Zod type check compares against, in a tree of
+# their own: in gen/typescript, json_types=true would break the overlay's
+# `XSchema as GenMessage<X, { validType }>` casts. `make verify` runs it with
+# -o internal/testdata/verify.
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/d0whc3r/protoc-gen-strict/gen
+plugins:
+  - remote: buf.build/bufbuild/es:v2.15.0
+    out: gen/esjson
+    opt:
+      - target=ts
+      - json_types=true

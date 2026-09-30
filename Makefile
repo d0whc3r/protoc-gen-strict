@@ -1,4 +1,5 @@
 BIN := bin/protoc-gen-strict
+SCHEMA_BIN := bin/protoc-gen-strict-schema
 # Lazily evaluated, and scoped to the module: `go list` skips dot-directories,
 # so installed agent skills under .agents/ never reach the formatters.
 GO_DIRS = $(shell go list -f '{{.Dir}}' ./...)
@@ -12,15 +13,16 @@ help: ## Display this help.
 ##@ Build & generate
 
 .PHONY: build
-build: ## Compile the plugin binary into ./bin.
+build: ## Compile both plugin binaries into ./bin.
 	go build -o $(BIN) ./cmd/protoc-gen-strict
+	go build -o $(SCHEMA_BIN) ./cmd/protoc-gen-strict-schema
 
 .PHONY: snapshot
 snapshot: ## Build the release archives into ./dist — no tag, no publish.
 	goreleaser release --snapshot --clean
 
 .PHONY: generate
-generate: build ## Run every plugin over ./proto into ./gen/{typescript,python,openapiv2}.
+generate: build install/protoc-gen-jsonschema ## Run every plugin over ./proto into ./gen/{typescript,python,openapiv2}.
 	@rm -rf gen  # buf's `clean` only empties each `out`, not a tree a layout change left behind
 	PATH="$(CURDIR)/bin:$$PATH" buf generate
 	# Second pass: protoc-gen-openapiv2 reads the config the first pass wrote.
@@ -29,12 +31,20 @@ generate: build ## Run every plugin over ./proto into ./gen/{typescript,python,o
 	@find gen -type f | sort
 
 VERIFY := internal/testdata/verify
+# Zod 3 and Zod 4 cannot both be installed as `zod`, so the zod3 target has a
+# project of its own, on zod 3. $(VERIFY) type-checks it against zod 4's zod/v3.
+VERIFY_ZOD3 := internal/testdata/verify-zod3
 
 .PHONY: verify
-verify: build ## Compile the generated TypeScript and import the generated Python — needs network, npm and python3.
-	@rm -rf $(VERIFY)/gen $(VERIFY)/venv
+verify: build install/protoc-gen-jsonschema ## Compile the generated TypeScript and JavaScript, run the schema checks and import the generated Python — needs network, npm and python3.
+	@rm -rf $(VERIFY)/gen $(VERIFY)/gen-js $(VERIFY)/venv $(VERIFY_ZOD3)/gen $(VERIFY_ZOD3)/gen-js
 	PATH="$(CURDIR)/bin:$$PATH" buf generate --include-imports -o $(VERIFY)
-	cd $(VERIFY) && npm install --silent --no-audit --no-fund && npx tsc --noEmit
+	buf generate --template $(VERIFY)/buf.gen.json.yaml -o $(VERIFY)
+	PATH="$(CURDIR)/bin:$$PATH" buf generate --include-imports --template $(VERIFY)/buf.gen.js.yaml -o $(VERIFY)
+	cd $(VERIFY) && npm install --silent --no-audit --no-fund && npx tsc --noEmit && npx tsc --noEmit -p tsconfig.dts.json && npx tsx assert.schema.ts && node assert.node.mjs
+	PATH="$(CURDIR)/bin:$$PATH" buf generate --include-imports --template $(VERIFY_ZOD3)/buf.gen.yaml -o $(VERIFY_ZOD3)
+	PATH="$(CURDIR)/bin:$$PATH" buf generate --include-imports --template $(VERIFY_ZOD3)/buf.gen.js.yaml -o $(VERIFY_ZOD3)
+	cd $(VERIFY_ZOD3) && npm install --silent --no-audit --no-fund && npx tsc --noEmit && npx tsc --noEmit -p tsconfig.dts.json && npx tsx assert.ts && node assert.node.mjs
 	python3 -m venv $(VERIFY)/venv
 	$(VERIFY)/venv/bin/pip install -q protobuf annotated_types
 	$(VERIFY)/venv/bin/python $(VERIFY)/assert.py
@@ -46,8 +56,11 @@ test: ## Run Go unit tests, including the hermetic golden tests.
 	go test ./...
 
 .PHONY: testdata
-testdata: ## Rebuild the descriptor set the golden tests run against.
+testdata: install/protoc-gen-jsonschema ## Rebuild the descriptor set and the JSON Schema bundles the golden tests run against.
 	buf build --as-file-descriptor-set -o internal/testdata/descriptors.binpb
+	# What protoc-gen-jsonschema writes for the same files, so the golden tests
+	# of target=json need no executable.
+	buf generate --template internal/testdata/buf.gen.jsonschema.yaml
 
 .PHONY: testdata-update
 testdata-update: testdata ## Rebuild the descriptor set and rewrite the golden files.
@@ -90,17 +103,27 @@ $(LOCALBIN):
 
 ## Tool Binaries
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+# The executable protoc-gen-strict-schema runs for target=json. The version is
+# jsonSchemaVersion in internal/generator/schemagen/bundles.go, which the
+# plugin requires.
+PROTOC_GEN_JSONSCHEMA = $(LOCALBIN)/protoc-gen-jsonschema
 
 ## Tool Versions
 GOLANGCI_LINT_VERSION ?= v2.12.2
+PROTOC_GEN_JSONSCHEMA_VERSION ?= v0.6.0
 
 .PHONY: bootstrap
-bootstrap: install/golangci-lint ## Install required dependencies to work with this project.
+bootstrap: install/golangci-lint install/protoc-gen-jsonschema ## Install required dependencies to work with this project.
 
 .PHONY: install/golangci-lint
 install/golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+.PHONY: install/protoc-gen-jsonschema
+install/protoc-gen-jsonschema: $(PROTOC_GEN_JSONSCHEMA) ## Download protoc-gen-jsonschema locally if necessary.
+$(PROTOC_GEN_JSONSCHEMA): $(LOCALBIN)
+	$(call go-install-tool,$(PROTOC_GEN_JSONSCHEMA),github.com/bufbuild/protoschema-plugins/cmd/protoc-gen-jsonschema,$(PROTOC_GEN_JSONSCHEMA_VERSION))
 
 # copied from kube-builder
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
@@ -123,4 +146,4 @@ endef
 
 .PHONY: clean
 clean: ## Remove build and generation artifacts.
-	rm -rf bin gen dist $(VERIFY)/gen $(VERIFY)/venv $(VERIFY)/node_modules
+	rm -rf bin gen dist $(VERIFY)/gen $(VERIFY)/gen-js $(VERIFY)/venv $(VERIFY)/node_modules $(VERIFY_ZOD3)/gen $(VERIFY_ZOD3)/gen-js $(VERIFY_ZOD3)/node_modules

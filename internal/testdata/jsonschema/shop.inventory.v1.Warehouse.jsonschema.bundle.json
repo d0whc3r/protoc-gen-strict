@@ -1,0 +1,266 @@
+{
+  "$defs": {
+    "google.protobuf.Duration.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "duration",
+      "title": "Duration",
+      "type": "string"
+    },
+    "shop.inventory.v1.ContactPoint.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "ContactPoint reaches a person by exactly one channel.",
+      "properties": {
+        "email": {
+          "description": "Email address.",
+          "format": "email",
+          "type": "string"
+        },
+        "extension": {
+          "anyOf": [
+            {
+              "maximum": 9999,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Internal extension number."
+        },
+        "name": {
+          "default": "",
+          "description": "Display name of the contact.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "phone": {
+          "description": "E.164 phone number.",
+          "pattern": "^\\+[1-9][0-9]{7,14}$",
+          "type": "string"
+        }
+      },
+      "title": "Contact Point",
+      "type": "object"
+    },
+    "shop.inventory.v1.OpeningHours.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OpeningHours is a daily window expressed in minutes past midnight.",
+      "patternProperties": {
+        "^(closes_at_minute)$": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Closing time, minutes past midnight."
+        },
+        "^(opens_at_minute)$": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Opening time, minutes past midnight."
+        }
+      },
+      "properties": {
+        "closesAtMinute": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Closing time, minutes past midnight."
+        },
+        "opensAtMinute": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Opening time, minutes past midnight."
+        }
+      },
+      "title": "Opening Hours",
+      "type": "object"
+    },
+    "shop.inventory.v1.Warehouse.Address.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Address is nested to check that nested messages are walked.",
+      "patternProperties": {
+        "^(country_code)$": {
+          "default": "",
+          "description": "ISO 3166-1 alpha-2 country code.",
+          "maxLength": 2,
+          "minLength": 2,
+          "pattern": "^[A-Z]{2}$",
+          "type": "string"
+        },
+        "^(postal_code)$": {
+          "default": "",
+          "description": "Postal code, format varies by country.",
+          "maxLength": 12,
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "properties": {
+        "city": {
+          "default": "",
+          "description": "City name.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "countryCode": {
+          "default": "",
+          "description": "ISO 3166-1 alpha-2 country code.",
+          "maxLength": 2,
+          "minLength": 2,
+          "pattern": "^[A-Z]{2}$",
+          "type": "string"
+        },
+        "line1": {
+          "default": "",
+          "description": "Street and number.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "line2": {
+          "description": "Apartment, floor, etc.",
+          "maxLength": 120,
+          "type": "string"
+        },
+        "postalCode": {
+          "default": "",
+          "description": "Postal code, format varies by country.",
+          "maxLength": 12,
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "title": "Address",
+      "type": "object"
+    },
+    "shop.inventory.v1.Warehouse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Warehouse is a physical stocking location.",
+      "patternProperties": {
+        "^(max_dwell_time)$": {
+          "$ref": "#/$defs/google.protobuf.Duration.jsonschema.json",
+          "description": "How long goods may sit before an alert is raised."
+        },
+        "^(opening_hours)$": {
+          "additionalProperties": {
+            "$ref": "#/$defs/shop.inventory.v1.OpeningHours.jsonschema.json"
+          },
+          "description": "Operating hours keyed by lowercase weekday name.",
+          "propertyNames": {
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "properties": {
+        "address": {
+          "$ref": "#/$defs/shop.inventory.v1.Warehouse.Address.jsonschema.json",
+          "description": "Physical location."
+        },
+        "contacts": {
+          "description": "Contact points for this warehouse, at least one is required.",
+          "items": {
+            "$ref": "#/$defs/shop.inventory.v1.ContactPoint.jsonschema.json"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "id": {
+          "default": "",
+          "description": "Server-assigned identifier.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        },
+        "maxDwellTime": {
+          "$ref": "#/$defs/google.protobuf.Duration.jsonschema.json",
+          "description": "How long goods may sit before an alert is raised."
+        },
+        "name": {
+          "default": "",
+          "description": "Human readable name.",
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        "openingHours": {
+          "additionalProperties": {
+            "$ref": "#/$defs/shop.inventory.v1.OpeningHours.jsonschema.json"
+          },
+          "description": "Operating hours keyed by lowercase weekday name.",
+          "propertyNames": {
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "title": "Warehouse",
+      "type": "object"
+    }
+  },
+  "$id": "shop.inventory.v1.Warehouse.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.inventory.v1.Warehouse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

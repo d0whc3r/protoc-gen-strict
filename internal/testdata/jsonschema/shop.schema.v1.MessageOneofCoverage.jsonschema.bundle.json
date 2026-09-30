@@ -1,0 +1,64 @@
+{
+  "$defs": {
+    "shop.schema.v1.MessageOneofCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "MessageOneofCoverage has implicit fields named by a message-level oneof\n rule. protovalidate gives such a field IGNORE_IF_ZERO_VALUE, so its zero\n value passes its own rules.",
+      "properties": {
+        "alias": {
+          "default": "",
+          "description": "An ignore of its own replaces the implicit one.",
+          "type": "string"
+        },
+        "code": {
+          "default": "",
+          "description": "\"\" passes: the implicit ignore exempts the zero value.",
+          "minLength": 3,
+          "type": "string"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^SCHEMA_COLOR_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SCHEMA_COLOR_RED",
+                "SCHEMA_COLOR_GREEN",
+                "SCHEMA_COLOR_BLUE"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "SCHEMA_COLOR_UNSPECIFIED passes for the same reason.",
+          "title": "Schema Color"
+        },
+        "label": {
+          "default": "",
+          "description": "No rule.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "[] passes for the same reason.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "title": "Message Oneof Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.MessageOneofCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.MessageOneofCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -48,6 +48,18 @@ The two overlays never drop a rule without saying so, which is what makes them
 the readable record. OpenAPI is the exception by format, so a rule it cannot
 express is only visible in the TypeScript or Python output.
 
+A second binary, `protoc-gen-strict-schema`, reads the same rules into runtime
+schemas instead of types:
+
+| | JSON Schema (`target=json`) | Zod (`target=zod`, `target=zod3`) |
+|---|---|---|
+| Output | `<file>.schema.ts`, and `strict/jsonschema.ts` once per run | `<file>.zod.ts` (`.zod3.ts` for `zod3`), and `strict/protovalidate.ts`, `strict/wkt.zod.ts` (`wkt.zod3.ts`) once per run |
+| Layered on | protoschema-jsonschema, `target=json-bundle` | protoc-gen-es, for the descriptors protovalidate-es reads |
+| What it emits | `<message>JsonSchema`, the upstream bundle without the keywords that reject valid values | `<message>ZodObject` to compose, `<message>Zod` to parse, `<enum>Zod` |
+| Rules it carries | those upstream writes exactly | those a Zod built-in checks exactly, as native checks |
+| Every other rule | named in the JSDoc, under "Left to runtime validation" | checked inside the schema by protovalidate-es; the JSDoc names which |
+| Which rules, exactly | [Runtime schemas](rule-coverage-schema.md#target-json) | [Runtime schemas](rule-coverage-schema.md#targets-zod-and-zod3) |
+
 ## What the parser reads
 
 - **Every standard `buf.validate` rule.** Constraints are read reflectively, so
@@ -72,14 +84,19 @@ the rest of the file.
 - `repeated.min_items = 3` narrows to "not empty", not to a 3-element tuple.
 - Rules on `repeated.items` describe the element; the element type is left alone.
 - A field with `ignore` set gets no narrowing at all, since under-narrowing is
-  the safe direction.
-- The OpenAPI config carries no CEL, enum, `oneof` or `required` rule, and a
-  swagger has no comment to name what was dropped. The zero enum member is still
+  the safe direction. That includes a member of a
+  `(buf.validate.message).oneof` that sets no `ignore`: protovalidate gives it
+  `IGNORE_IF_ZERO_VALUE`, and the parser records that as the field's `Ignore`.
+  Every target's comment names it: `ignore = IGNORE_IF_ZERO_VALUE (implied by
+  the message oneof)`.
+- The OpenAPI config carries no CEL, enum, `oneof`, `required` or `pattern`
+  rule, and a swagger has no comment to name what was dropped. The zero enum member is still
   dropped there, by protoc-gen-openapiv2's own `omit_enum_default_value=true`.
 - The Python overlay carries the excluded zero as the enum's own alias. A bare
   enum field, and any field whose enum comes from another proto file, keeps the
   class protoc-gen-python declared.
-- Only TypeScript, Python and OpenAPI. Another target means another generator.
+- Only TypeScript, Python and OpenAPI, plus JSON Schema and Zod from
+  `protoc-gen-strict-schema`. Another target means another generator.
 
 ## Adding a narrowing
 
@@ -87,7 +104,9 @@ A new narrowing lands in the parser first, as IR, then in each generator. It is
 not done until:
 
 - the rule has a row in the doc of every target that carries it,
-- `internal/testdata/verify/assert.ts` asserts the new type actually bites,
+- `internal/testdata/verify/assert.ts` asserts the new type actually bites; for
+  the runtime schemas, `proto/shop/schema/v1/schema.proto` has a field for it and
+  `internal/testdata/schema-corpus.ts` its inputs,
 - and a target that does not carry it still prints it, where it can.
 
 See [Internals](internals.md) for the pipeline and the layering rule behind that

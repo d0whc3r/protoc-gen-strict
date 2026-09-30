@@ -3,7 +3,6 @@ package tsgen
 import (
 	"maps"
 	"path"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/d0whc3r/protoc-gen-strict/internal/generator/emit"
+	"github.com/d0whc3r/protoc-gen-strict/internal/generator/tscode"
 )
 
 // Module suffixes: protoc-gen-es writes <base>_pb, this plugin <base>.strict.
@@ -38,7 +38,7 @@ type tsFile struct {
 	out   string // this file's output path, e.g. "example/v1/user.strict.ts"
 	base  string // the protoc-gen-es module next to it, e.g. "./user_pb"
 
-	locals        *localNames                  // every identifier this file binds
+	locals        *tscode.Names                // every identifier this file binds
 	shapes        map[string]string            // type-only imports from base: symbol -> local
 	values        map[string]string            // value imports from base, likewise
 	helpers       map[string]string            // imports from strict/types
@@ -52,9 +52,9 @@ func newTSFile(ctx *Context, file *protogen.File) *tsFile {
 	return &tsFile{
 		ctx:           ctx,
 		proto:         file.Desc.Path(),
-		out:           file.GeneratedFilenamePrefix + strictSuffix + ".ts",
-		base:          "./" + path.Base(file.GeneratedFilenamePrefix) + esSuffix,
-		locals:        newLocalNames(),
+		out:           emit.OutputPrefix(file.Desc.Path()) + strictSuffix + ".ts",
+		base:          "./" + path.Base(emit.OutputPrefix(file.Desc.Path())) + esSuffix,
+		locals:        tscode.NewNames(),
 		shapes:        map[string]string{},
 		values:        map[string]string{},
 		helpers:       map[string]string{},
@@ -64,42 +64,9 @@ func newTSFile(ctx *Context, file *protogen.File) *tsFile {
 	}
 }
 
-// localNames binds every identifier one output file uses to the module and
-// symbol it came from.
-//
-// A proto name is unique only inside its package, so two packages both
-// declaring `Thing` would have this file import `Thing` twice, and a local
-// declaration can want a name an import already took. The second binding gets a
-// `$1` suffix, as protoc-gen-es does, and every reference to it resolves through
-// the same table.
-type localNames struct {
-	taken map[string]bool   // identifier -> bound
-	bound map[string]string // module + "#" + symbol -> identifier
-}
-
-func newLocalNames() *localNames {
-	return &localNames{taken: map[string]bool{}, bound: map[string]string{}}
-}
-
-// bind returns the identifier this file uses for a symbol, assigning one on
-// first sight. An empty module is a declaration in the output file itself.
-func (n *localNames) bind(module, symbol string) string {
-	key := module + "#" + symbol
-	if local, ok := n.bound[key]; ok {
-		return local
-	}
-	local := symbol
-	for i := 1; n.taken[local]; i++ {
-		local = symbol + "$" + strconv.Itoa(i)
-	}
-	n.taken[local] = true
-	n.bound[key] = local
-	return local
-}
-
 // declare reserves a name the output file defines itself, so no import takes it
 // first. Declarations are reserved before any body is emitted.
-func (f *tsFile) declare(symbol string) string { return f.locals.bind("", symbol) }
+func (f *tsFile) declare(symbol string) string { return f.locals.Bind("", symbol) }
 
 func (f *tsFile) P(parts ...string) { f.lines = append(f.lines, strings.Join(parts, "")) }
 
@@ -113,14 +80,14 @@ func (f *tsFile) helper(name string) string { return f.record(f.helpers, f.helpe
 
 // helperModule is the specifier for the shared strict/types, seen from here.
 func (f *tsFile) helperModule() string {
-	return relImport(f.out, strings.TrimSuffix(strictTypesFile, ".ts"))
+	return tscode.RelImport(f.out, strings.TrimSuffix(strictTypesFile, ".ts"))
 }
 
 func (f *tsFile) gen(name string) string { return f.record(f.codegen, codegenModule, name) }
 
 // record binds one imported symbol and remembers the bucket it prints from.
 func (f *tsFile) record(bucket map[string]string, module, name string) string {
-	local := f.locals.bind(module, name)
+	local := f.locals.Bind(module, name)
 	bucket[name] = local
 	return local
 }
@@ -152,7 +119,7 @@ func (f *tsFile) moduleFor(protoPath, suffix string) string {
 	if strings.HasPrefix(protoPath, wktDir) {
 		return wktModule
 	}
-	return relImport(f.out, strings.TrimSuffix(protoPath, ".proto")+suffix)
+	return tscode.RelImport(f.out, strings.TrimSuffix(protoPath, ".proto")+suffix)
 }
 
 func (f *tsFile) foreignType(module, name string) string {
@@ -207,37 +174,7 @@ func (f *tsFile) importLines() []string {
 }
 
 func (f *tsFile) doc(indent string, lines []string) {
-	lines = emit.CommentLines(lines)
-	if len(lines) == 0 {
-		return
-	}
-	if len(lines) == 1 {
-		f.P(indent, "/** ", tsComment(lines[0]), " */")
-		return
-	}
-	f.P(indent, "/**")
-	for _, line := range lines {
-		if line == "" {
-			f.P(indent, " *")
-			continue
-		}
-		f.P(indent, " * ", tsComment(line))
-	}
-	f.P(indent, " */")
-}
-
-// relImport renders the specifier for `to`, an extensionless path from the
-// output root, as seen from `from`. Extensionless matches protoc-gen-es.
-func relImport(from, to string) string {
-	rel, err := filepath.Rel(path.Dir(from), to)
-	if err != nil {
-		return "./" + to // unreachable for the slash paths protogen hands us
-	}
-	rel = filepath.ToSlash(rel)
-	if !strings.HasPrefix(rel, ".") {
-		rel = "./" + rel
-	}
-	return rel
+	f.lines = append(f.lines, tscode.DocBlock(indent, lines)...)
 }
 
 func quotedUnion(names []string) string {
@@ -246,12 +183,6 @@ func quotedUnion(names []string) string {
 		quoted = append(quoted, strconv.Quote(name))
 	}
 	return strings.Join(quoted, " | ")
-}
-
-// tsComment stops a `*/` inside a rule, which is legal in a CEL string, from
-// closing the block comment early.
-func tsComment(line string) string {
-	return strings.ReplaceAll(line, "*/", "*\\/")
 }
 
 // docLines drops the entries a missing proto comment leaves behind, so an

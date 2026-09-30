@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "shop.schema.v1.TreeNode.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "TreeNode refers to itself, directly and through a list.",
+      "properties": {
+        "children": {
+          "description": "Self-recursive through a list.",
+          "items": {
+            "$ref": "#/$defs/shop.schema.v1.TreeNode.jsonschema.json"
+          },
+          "type": "array"
+        },
+        "label": {
+          "default": "",
+          "description": "Must not be empty.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "parent": {
+          "$ref": "#/$defs/shop.schema.v1.TreeNode.jsonschema.json",
+          "description": "Self-recursive through a singular field."
+        },
+        "skipped": {
+          "$ref": "#/$defs/shop.schema.v1.TreeNode.jsonschema.json",
+          "description": "Never evaluated, so it takes any value and closes no cycle."
+        }
+      },
+      "title": "Tree Node",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.TreeNode.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.TreeNode.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

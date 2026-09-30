@@ -47,7 +47,13 @@ func collect(msg protoreflect.Message, prefix string) []Rule {
 			}
 			out = append(out, nested...)
 		default:
-			out = append(out, Rule{Kind: name, Value: formatValue(fd, v)})
+			rule := Rule{Kind: name, Value: formatValue(fd, v)}
+			// The joined Value is ambiguous once an element holds ", ", so a
+			// generator that needs the members reads them one by one.
+			if fd.IsList() {
+				rule.Values = formatElements(fd, v.List())
+			}
+			out = append(out, rule)
 		}
 		return true
 	})
@@ -56,14 +62,17 @@ func collect(msg protoreflect.Message, prefix string) []Rule {
 
 func formatValue(fd protoreflect.FieldDescriptor, v protoreflect.Value) string {
 	if fd.IsList() {
-		list := v.List()
-		parts := make([]string, 0, list.Len())
-		for i := 0; i < list.Len(); i++ {
-			parts = append(parts, formatElement(fd, list.Get(i)))
-		}
-		return "[" + strings.Join(parts, ", ") + "]"
+		return "[" + strings.Join(formatElements(fd, v.List()), ", ") + "]"
 	}
 	return formatElement(fd, v)
+}
+
+func formatElements(fd protoreflect.FieldDescriptor, list protoreflect.List) []string {
+	parts := make([]string, 0, list.Len())
+	for i := range list.Len() {
+		parts = append(parts, formatElement(fd, list.Get(i)))
+	}
+	return parts
 }
 
 // formatElement renders one value of the field's type. Messages go through the

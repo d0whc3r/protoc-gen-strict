@@ -4,6 +4,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // TestEnumZero covers the member a strict enum type excludes. Proto3 requires
@@ -103,4 +107,103 @@ func TestOutputOnlyPaths(t *testing.T) {
 			t.Errorf("outputOnlyPaths() walked into a repeated or map field: %q", path)
 		}
 	}
+}
+
+// TestListRuleValues covers Rule.Values. The joined Value reads the same for
+// ["a, b"] and ["a", "b"], so a generator that emits the members — a Zod enum —
+// has to have them one by one.
+func TestListRuleValues(t *testing.T) {
+	fields := loadMessage(t, "shop.coverage.v1.StringRuleCoverage").Fields()
+	rules := standardRules(fieldRules(fields.ByName("enumerated")))
+
+	want := map[string][]string{
+		"string.in":     {"alpha", "beta", "stable"},
+		"string.not_in": {"deprecated"},
+	}
+	for _, rule := range rules {
+		if got := rule.Values; !slices.Equal(got, want[rule.Kind]) {
+			t.Errorf("%s: Values = %q, want %q", rule.Kind, got, want[rule.Kind])
+		}
+	}
+	if len(rules) != len(want) {
+		t.Errorf("got %d rules, want %d", len(rules), len(want))
+	}
+
+	// A scalar rule has no members to list.
+	constant := standardRules(fieldRules(fields.ByName("constant")))
+	if len(constant) != 1 || constant[0].Values != nil {
+		t.Errorf("string.const: Values = %q, want nil", constant[0].Values)
+	}
+}
+
+// TestFieldResolution covers the field facts ParseFile resolves from the
+// descriptor rather than copies from the rules: the protojson name, which
+// json_name overrides; presence; and the ignore protovalidate applies, which a
+// member of a (buf.validate.message).oneof gets without setting it.
+func TestFieldResolution(t *testing.T) {
+	messages := parseFixture(t, "shop/schema/v1/schema.proto")
+	field := func(message, name string) FieldMetadata {
+		t.Helper()
+		for _, msg := range messages {
+			if msg.Name != message {
+				continue
+			}
+			for _, f := range msg.Fields {
+				if f.Name == name {
+					return f
+				}
+			}
+		}
+		t.Fatalf("no field %s.%s", message, name)
+		return FieldMetadata{}
+	}
+
+	for _, tt := range []struct {
+		message, field string
+		jsonName       string
+		presence       bool
+		ignore         string
+	}{
+		{"shop.schema.v1.JsonNameCoverage", "external_id", "extId", false, ""},
+		{"shop.schema.v1.JsonNameCoverage", "metric_1st", "metric1st", false, ""},
+		{"shop.schema.v1.StringContentCoverage", "nickname", "nickname", true, ""},
+		{"shop.schema.v1.ImplicitCoverage", "required_item", "requiredItem", true, ""},
+		{"shop.schema.v1.OneofCoverage", "email", "email", true, ""},
+		{"shop.schema.v1.IgnoreCoverage", "email", "email", false, "IGNORE_IF_ZERO_VALUE"},
+		{"shop.schema.v1.IgnoreCoverage", "never_checked", "neverChecked", false, "IGNORE_ALWAYS"},
+		{"shop.schema.v1.MessageOneofCoverage", "code", "code", false, "IGNORE_IF_ZERO_VALUE"},
+		{"shop.schema.v1.MessageOneofCoverage", "tags", "tags", false, "IGNORE_IF_ZERO_VALUE"},
+		{"shop.schema.v1.MessageOneofCoverage", "alias", "alias", false, "IGNORE_ALWAYS"},
+	} {
+		got := field(tt.message, tt.field)
+		if got.JSONName != tt.jsonName || got.Presence != tt.presence || got.Ignore != tt.ignore {
+			t.Errorf("%s.%s: JSONName %q, Presence %v, Ignore %q; want %q, %v, %q",
+				tt.message, tt.field, got.JSONName, got.Presence, got.Ignore, tt.jsonName, tt.presence, tt.ignore)
+		}
+	}
+}
+
+// parseFixture runs ParseFile over one file of the committed descriptor set,
+// through protogen the way the plugin receives it.
+func parseFixture(t *testing.T, path string) []MessageMetadata {
+	t.Helper()
+	set := readDescriptorSet(t)
+	param := "M" + path + "=example.test/x"
+	gen, err := protogen.Options{}.New(&pluginpb.CodeGeneratorRequest{
+		FileToGenerate: []string{path},
+		Parameter:      proto.String(param),
+		ProtoFile:      set.GetFile(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, ok := gen.FilesByPath[path]
+	if !ok {
+		t.Fatalf("no file %s in the descriptor set", path)
+	}
+	messages, err := ParseFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return messages
 }

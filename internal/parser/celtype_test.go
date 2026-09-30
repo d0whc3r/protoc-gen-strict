@@ -183,15 +183,7 @@ func termKey(term CELTerm) string {
 // needs neither protoc nor a network.
 func loadMessage(t *testing.T, name string) protoreflect.MessageDescriptor {
 	t.Helper()
-	raw, err := os.ReadFile("../testdata/descriptors.binpb")
-	if err != nil {
-		t.Fatalf("read descriptor set (run `make testdata`): %v", err)
-	}
-	var set descriptorpb.FileDescriptorSet
-	if err := proto.Unmarshal(raw, &set); err != nil {
-		t.Fatal(err)
-	}
-	files, err := protodesc.NewFiles(&set)
+	files, err := protodesc.NewFiles(readDescriptorSet(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,4 +196,18 @@ func loadMessage(t *testing.T, name string) protoreflect.MessageDescriptor {
 		t.Fatalf("%s is not a message", name)
 	}
 	return msg
+}
+
+// readDescriptorSet reads the fixture descriptors `make testdata` writes.
+func readDescriptorSet(t *testing.T) *descriptorpb.FileDescriptorSet {
+	t.Helper()
+	raw, err := os.ReadFile("../testdata/descriptors.binpb")
+	if err != nil {
+		t.Fatalf("read descriptor set (run `make testdata`): %v", err)
+	}
+	var set descriptorpb.FileDescriptorSet
+	if err := proto.Unmarshal(raw, &set); err != nil {
+		t.Fatal(err)
+	}
+	return &set
 }

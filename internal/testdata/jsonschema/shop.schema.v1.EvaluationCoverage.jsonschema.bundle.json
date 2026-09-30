@@ -1,0 +1,46 @@
+{
+  "$defs": {
+    "shop.schema.v1.EvaluationCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "EvaluationCoverage has a message rule that fails to evaluate while divisor\n is 0, the value divisor holds in the message field() checks total in.",
+      "properties": {
+        "divisor": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "0 makes the message rule fail to evaluate."
+        },
+        "total": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "An even number."
+        }
+      },
+      "title": "Evaluation Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.EvaluationCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.EvaluationCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

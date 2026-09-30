@@ -163,8 +163,8 @@ NumericRuleCoverageSf64 = Annotated[
 NumericRuleCoverageRatio = Annotated[
     float,
     "float.finite = true",
-    Ge(0),
-    Le(1),
+    "float.gte = 0",
+    "float.lte = 1",
 ]
 NumericRuleCoverageFactor = Annotated[
     float,
@@ -370,7 +370,7 @@ CelRuleCoverageNested = Annotated[
 # Inner holds the fields the nested-shape rule reaches into: a message field, which tracks presence, and an enum.
 
 # AmbiguityCoverage exercises the cases where the proto text and what the generated code declares come apart: a property named by something other than the field, a rule combination no target can carry, and a rule the overlay has to report rather than translate.
-# oneof channel: exactly one of email, phone
+# oneof channel: at most one of email, phone
 # cel[ambiguity.implicit_presence]: has(this.label) && !has(this.legacy_note)
 #   message: label must be set and legacy_note must be left empty
 #   refs: label, legacy_note, this

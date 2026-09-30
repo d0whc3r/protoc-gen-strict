@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "shop.coverage.v1.ScalarRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "ScalarRuleCoverage exercises the remaining scalar families.",
+      "patternProperties": {
+        "^(remote_ip)$": {
+          "default": null,
+          "description": "Bytes constrained to a well-known format.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "accepted": {
+          "default": false,
+          "description": "Must be explicitly true.",
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        },
+        "defined": {
+          "anyOf": [
+            {
+              "pattern": "^FLAVOR_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "FLAVOR_SWEET",
+                "FLAVOR_SALTY",
+                "FLAVOR_SOUR",
+                "FLAVOR_BITTER"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 4,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "Enum restricted to declared values.",
+          "title": "Flavor"
+        },
+        "payload": {
+          "default": null,
+          "description": "Length-bounded opaque bytes.",
+          "maxLength": 5464,
+          "minLength": 2,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "pinned": {
+          "anyOf": [
+            {
+              "enum": [
+                "FLAVOR_SOUR"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 3,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "Enum pinned to one value.",
+          "title": "Flavor"
+        },
+        "remoteIp": {
+          "default": null,
+          "description": "Bytes constrained to a well-known format.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "signature": {
+          "default": null,
+          "description": "Fixed-length bytes with a prefix rule.",
+          "maxLength": 44,
+          "minLength": 43,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "subset": {
+          "anyOf": [
+            {
+              "enum": [
+                "FLAVOR_SWEET",
+                "FLAVOR_SALTY"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "Enum restricted to a subset.",
+          "title": "Flavor"
+        }
+      },
+      "title": "Scalar Rule Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.coverage.v1.ScalarRuleCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.coverage.v1.ScalarRuleCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

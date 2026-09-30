@@ -1,0 +1,349 @@
+{
+  "$defs": {
+    "shop.schema.v1.NumberCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "NumberCoverage has one field per numeric rule shape, over every JSON\n number form: int32-family numbers, int64-family strings, floats with NaN.",
+      "patternProperties": {
+        "^(big_unsigned)$": {
+          "anyOf": [
+            {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Unsigned 64-bit, a JSON string."
+        },
+        "^(const_value)$": {
+          "anyOf": [
+            {
+              "enum": [
+                7
+              ],
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "A single literal."
+        },
+        "^(in_set)$": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3
+              ],
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "A union of literals."
+        },
+        "^(not_in_set)$": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Left to protovalidate."
+        },
+        "^(reversed_range)$": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 5,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "exclusiveMaximum": 2147483648,
+              "exclusiveMinimum": 10,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Exclusive range: gt above lt means \"outside 5..10\"."
+        },
+        "^(signed_fixed)$": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 0,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Fixed-width signed 32-bit."
+        }
+      },
+      "properties": {
+        "big": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Signed 64-bit, a JSON string."
+        },
+        "bigUnsigned": {
+          "anyOf": [
+            {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Unsigned 64-bit, a JSON string."
+        },
+        "bounded": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "In-range bounds."
+        },
+        "capped": {
+          "anyOf": [
+            {
+              "maximum": 0.1,
+              "minimum": -3.4028234663852886e+38,
+              "type": "number"
+            },
+            {
+              "enum": [
+                "-Infinity"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "A float32 bound: JSON carries the float32 widened to a double."
+        },
+        "constValue": {
+          "anyOf": [
+            {
+              "enum": [
+                7
+              ],
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "A single literal."
+        },
+        "factor": {
+          "anyOf": [
+            {
+              "enum": [
+                0.5,
+                1,
+                2
+              ],
+              "type": "number"
+            },
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$",
+              "type": "string"
+            }
+          ],
+          "description": "Double restricted to a set."
+        },
+        "fixed": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Fixed-width unsigned 32-bit."
+        },
+        "inSet": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3
+              ],
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "A union of literals."
+        },
+        "notInSet": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Left to protovalidate."
+        },
+        "ratio": {
+          "anyOf": [
+            {
+              "maximum": 3.4028234663852886e+38,
+              "minimum": -3.4028234663852886e+38,
+              "type": "number"
+            },
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$",
+              "type": "string"
+            }
+          ],
+          "description": "Rejects NaN and the infinities."
+        },
+        "reversedRange": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 5,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "exclusiveMaximum": 2147483648,
+              "exclusiveMinimum": 10,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Exclusive range: gt above lt means \"outside 5..10\"."
+        },
+        "score": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "enum": [
+                "Infinity"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Double with an exclusive lower bound."
+        },
+        "signedFixed": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 0,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Fixed-width signed 32-bit."
+        },
+        "unsigned": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 65536,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Unsigned 32-bit, half-open range."
+        },
+        "zigzag": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -128,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Zigzag-encoded signed 32-bit."
+        }
+      },
+      "title": "Number Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.NumberCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.NumberCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -24,21 +24,23 @@ const (
 // The 64-bit integers are absent on purpose: JSON carries them as strings, and
 // protoc-gen-openapiv2 types them `{"type": "string", "format": "int64"}`, where
 // a `minimum` describes nothing. `bytes` is absent for the same reason — its
-// length rules count raw bytes, not the base64 the client sends.
+// length rules count raw bytes, not the base64 the client sends. `float` is
+// absent because protovalidate compares the value rounded to float32: `lte: 0.1`
+// admits 0.1000000001, which rounds to 0.1f, and `maximum: 0.1` rejects it.
 var boundedTypes = map[string]numberKind{
 	"int32": wholeNumber, "sint32": wholeNumber, "sfixed32": wholeNumber,
 	"uint32": wholeNumber, "fixed32": wholeNumber,
-	"float": fractional, "double": fractional,
+	"double": fractional,
 }
 
-// stringFormats are the string rules that name a JSONSchema `format`.
+// stringFormats are the string rules that name a JSONSchema `format` no
+// asserting validator narrows past protovalidate. `email`, `ipv6` and `uri` are
+// absent: ajv-formats rejects `user@localhost`, `fe80::1%eth0` and
+// `http://[fe80::1%25eth0]/`, which protovalidate accepts.
 var stringFormats = map[string]string{
 	"uuid":     "uuid",
-	"email":    "email",
-	"uri":      "uri",
 	"hostname": "hostname",
 	"ipv4":     "ipv4",
-	"ipv6":     "ipv6",
 }
 
 // keyword is one JSONSchema keyword and its value, already rendered as YAML.
@@ -118,9 +120,6 @@ func stringKeywords(leaf, value string) []keyword {
 		return []keyword{{"maxLength", value}}
 	case "min_len":
 		return []keyword{{"minLength", value}}
-	case "pattern":
-		// A RE2 source string, straight from the proto: quote it.
-		return []keyword{{"pattern", strconv.Quote(value)}}
 	}
 	return nil
 }

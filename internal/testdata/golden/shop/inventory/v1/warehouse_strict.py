@@ -120,7 +120,7 @@ ContactPointExtension = Annotated[
 ]
 
 # StockMovement records one change to the stock level of a product.
-# oneof: exactly one of purchase_order_id, customer_order_id
+# oneof: at most one of purchase_order_id, customer_order_id
 # cel[stock_movement.quantity_sign]: (this.kind == 2 && this.quantity_delta < 0) || (this.kind == 1 && this.quantity_delta > 0) || this.kind == 3
 #   message: outbound movements require a negative quantity, inbound a positive one
 #   refs: kind, quantity_delta, this
@@ -156,11 +156,13 @@ StockMovementOccurredAt = Annotated[
 ]
 StockMovementPurchaseOrderId = Annotated[
     str,
-    MaxLen(64),
+    "ignore = IGNORE_IF_ZERO_VALUE (implied by the message oneof)",
+    "string.max_len = 64",
 ]
 StockMovementCustomerOrderId = Annotated[
     str,
-    MaxLen(64),
+    "ignore = IGNORE_IF_ZERO_VALUE (implied by the message oneof)",
+    "string.max_len = 64",
 ]
 
 # StockLevel is the current quantity of a product in a warehouse.

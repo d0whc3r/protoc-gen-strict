@@ -1,0 +1,210 @@
+{
+  "$defs": {
+    "google.protobuf.Timestamp.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "shop.common.v1.Money.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Money is a fixed-point amount, split into whole units and nanos the way\n google.type.Money does.",
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "enum": [
+                "CURRENCY_EUR",
+                "CURRENCY_USD",
+                "CURRENCY_GBP"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ],
+          "description": "The currency of the amount.",
+          "title": "Currency"
+        },
+        "nanos": {
+          "anyOf": [
+            {
+              "maximum": 999999999,
+              "minimum": -999999999,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fractional part in nanos, e.g. 500000000 for 12.50 EUR."
+        },
+        "units": {
+          "anyOf": [
+            {
+              "maximum": 1000000000,
+              "minimum": -1000000000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Whole currency units, e.g. 12 for 12.50 EUR."
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "shop.inventory.v1.StockMovement.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "StockMovement records one change to the stock level of a product.",
+      "patternProperties": {
+        "^(customer_order_id)$": {
+          "default": "",
+          "description": "Customer order reference.",
+          "maxLength": 64,
+          "type": "string"
+        },
+        "^(occurred_at)$": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "When the movement was recorded. Never in the future."
+        },
+        "^(product_id)$": {
+          "description": "The product that moved.",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        },
+        "^(purchase_order_id)$": {
+          "default": "",
+          "description": "Supplier purchase order reference.",
+          "maxLength": 64,
+          "type": "string"
+        },
+        "^(quantity_delta)$": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Signed change in units."
+        },
+        "^(unit_cost)$": {
+          "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+          "description": "Cost of the goods that moved, for inbound movements."
+        },
+        "^(warehouse_id)$": {
+          "description": "The warehouse the movement happened in.",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "customerOrderId": {
+          "default": "",
+          "description": "Customer order reference.",
+          "maxLength": 64,
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "description": "Server-assigned identifier.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "STOCK_MOVEMENT_KIND_INBOUND",
+                "STOCK_MOVEMENT_KIND_OUTBOUND",
+                "STOCK_MOVEMENT_KIND_ADJUSTMENT"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "What kind of movement this is.",
+          "title": "Stock Movement Kind"
+        },
+        "occurredAt": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "When the movement was recorded. Never in the future."
+        },
+        "productId": {
+          "description": "The product that moved.",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        },
+        "purchaseOrderId": {
+          "default": "",
+          "description": "Supplier purchase order reference.",
+          "maxLength": 64,
+          "type": "string"
+        },
+        "quantityDelta": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Signed change in units."
+        },
+        "unitCost": {
+          "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+          "description": "Cost of the goods that moved, for inbound movements."
+        },
+        "warehouseId": {
+          "description": "The warehouse the movement happened in.",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "warehouseId",
+        "productId",
+        "occurredAt"
+      ],
+      "title": "Stock Movement",
+      "type": "object"
+    }
+  },
+  "$id": "shop.inventory.v1.StockMovement.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.inventory.v1.StockMovement.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

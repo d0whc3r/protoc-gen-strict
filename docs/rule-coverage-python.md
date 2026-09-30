@@ -45,7 +45,7 @@ UserId = Annotated[
 | `string.len`, `bytes.len` | `MinLen` and `MaxLen` at the same value, which is what `Len(n, n)` unpacks into |
 | `repeated.min_items`, `map.min_pairs` | `MinLen` |
 | `repeated.max_items`, `map.max_pairs` | `MaxLen` |
-| every numeric type's `.gt`, `.gte`, `.lt`, `.lte` | `Gt`, `Ge`, `Lt`, `Le` |
+| every numeric type's `.gt`, `.gte`, `.lt`, `.lte`, but `float`'s | `Gt`, `Ge`, `Lt`, `Le` |
 
 The bound is emitted as the parser printed it. Unlike the OpenAPI target there
 is no 64-bit exclusion and no rounding: a Python `int` is arbitrary precision,
@@ -61,8 +61,14 @@ and protoc-gen-pyi types every integer width as `int`.
 - **`duration` and `timestamp` bounds.** Their value is a message, and the parser
   prints one rule per sub-field (`duration.gte.seconds`), which is not a number
   to compare the field against.
+- **`float` bounds.** protobuf reads a float field back as the float32 widened
+  to a double: `0.1f` is `0.10000000149011612`, which `Le(0.1)` rejects.
+  `double` bounds are carried.
 - **A field with `ignore` set,** for the reason the other targets drop it: the
   sibling rules do not always apply, so none of them describes the type either.
+  An enum field keeps the plain class, zero member included. That includes
+  a member of a `(buf.validate.message).oneof`, which protovalidate gives
+  `IGNORE_IF_ZERO_VALUE` unless it sets an `ignore` of its own.
 - **A reversed numeric range,** where protovalidate reads a lower bound above the
   upper one as "outside that range". `Gt(20)` and `Lt(10)` next to each other are
   a conjunction no value satisfies, which narrows harder than the proto asked.
@@ -219,7 +225,7 @@ the generated swagger is never patched after the fact.
 | `string.min_len`, `max_len`, `len` | `minLength`, `maxLength`, both |
 | `string.pattern` | `pattern` |
 | `string.uuid`, `email`, `uri`, `hostname`, `ipv4`, `ipv6` | `format` |
-| `int32`, `uint32`, `sint32`, `fixed32`, `float`, `double`: `.gte`, `.lte` | `minimum`, `maximum` |
+| `int32`, `uint32`, `sint32`, `fixed32`, `double`: `.gte`, `.lte` | `minimum`, `maximum` |
 | the same types' `.gt`, `.lt` | the bound, plus `exclusiveMinimum` or `exclusiveMaximum` |
 | `repeated.min_items`, `max_items`, `unique` | `minItems`, `maxItems`, `uniqueItems` |
 | `map.min_pairs`, `max_pairs` | `minProperties`, `maxProperties` |
@@ -240,7 +246,9 @@ a rule the TypeScript overlay has no way to carry:
 
 ### What is deliberately not carried
 
-- **A field with `ignore` set**, for the reason the TypeScript overlay drops it.
+- **A field with `ignore` set**, for the reason the TypeScript overlay drops it,
+  including a member of a `(buf.validate.message).oneof`, which protovalidate
+  gives `IGNORE_IF_ZERO_VALUE` unless it sets an `ignore` of its own.
   `repeated.items.ignore` does the same for the element rules alone.
 - **A reversed numeric range,** where protovalidate reads a lower bound above the
   upper one as "outside that range" and JSONSchema has no way to say "or".

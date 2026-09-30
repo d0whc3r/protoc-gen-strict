@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "shop.schema.v1.OneofCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OneofCoverage has both oneof kinds: real oneofs, flattened into the JSON\n object, and a message-level oneof rule over plain fields.",
+      "patternProperties": {
+        "^(first_name)$": {
+          "description": "Part of the message-level oneof rule.",
+          "type": "string"
+        },
+        "^(last_name)$": {
+          "description": "Part of the message-level oneof rule.",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "email": {
+          "description": "A member with a rule of its own.",
+          "format": "email",
+          "type": "string"
+        },
+        "firstName": {
+          "description": "Part of the message-level oneof rule.",
+          "type": "string"
+        },
+        "lastName": {
+          "description": "Part of the message-level oneof rule.",
+          "type": "string"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Page number."
+        },
+        "phone": {
+          "description": "A member without rules.",
+          "type": "string"
+        },
+        "query": {
+          "description": "Free-text query.",
+          "type": "string"
+        }
+      },
+      "title": "Oneof Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.OneofCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.OneofCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

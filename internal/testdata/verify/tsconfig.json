@@ -4,8 +4,12 @@
     "target": "es2022",
     "module": "preserve",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    // gen/esjson (the <Message>Json types) is generated without its imports:
+    // resolve its buf/validate and google/api imports in gen/typescript.
+    "rootDirs": ["gen/typescript", "gen/esjson"],
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["gen/typescript/**/*.ts", "assert.ts"]
+  "include": ["gen/typescript/**/*.ts", "assert.ts", "assert.schema.ts"]
 }

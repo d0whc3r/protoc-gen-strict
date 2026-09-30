@@ -1,0 +1,19 @@
+# The zod3 target, generated on its own: Zod 3 and Zod 4 cannot both be
+# installed as `zod`. `make verify` runs it with -o internal/testdata/verify-zod3.
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/d0whc3r/protoc-gen-strict/gen
+plugins:
+  - remote: buf.build/bufbuild/es:v2.15.0
+    out: gen/typescript
+    opt:
+      - target=ts
+      - json_types=true
+  - local: ./bin/protoc-gen-strict-schema
+    out: gen/typescript
+    opt: target=zod3
+    strategy: all

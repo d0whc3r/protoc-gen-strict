@@ -1,0 +1,94 @@
+{
+  "$defs": {
+    "shop.schema.v1.BytesCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "BytesCoverage has one field per bytes rule. JSON carries bytes as base64,\n standard or URL-safe.",
+      "patternProperties": {
+        "^(exact_len)$": {
+          "description": "Byte length, bounded upstream on the base64 length.",
+          "maxLength": 8,
+          "minLength": 6,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "^(max_len)$": {
+          "description": "Byte length, bounded upstream on the base64 length.",
+          "maxLength": 12,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "^(min_len)$": {
+          "description": "Byte length, bounded upstream on the base64 length.",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "^(required_blob)$": {
+          "description": "required on a field with presence: empty bytes are a valid set value.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "exactLen": {
+          "description": "Byte length, bounded upstream on the base64 length.",
+          "maxLength": 8,
+          "minLength": 6,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "ip": {
+          "description": "4 or 16 bytes.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "maxLen": {
+          "description": "Byte length, bounded upstream on the base64 length.",
+          "maxLength": 12,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "minLen": {
+          "description": "Byte length, bounded upstream on the base64 length.",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "RE2 over the decoded bytes.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "prefix": {
+          "description": "Over the decoded bytes.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "raw": {
+          "description": "No rule: only the base64 shape.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "requiredBlob": {
+          "description": "required on a field with presence: empty bytes are a valid set value.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        },
+        "uuid": {
+          "description": "16 bytes.",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requiredBlob"
+      ],
+      "title": "Bytes Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.BytesCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.BytesCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

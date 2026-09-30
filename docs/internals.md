@@ -1,6 +1,10 @@
 # Internals
 
-How the plugin works. For usage, see the [README](../README.md).
+How the plugins work. For usage, see
+[protoc-gen-strict](../cmd/protoc-gen-strict/README.md) and
+[protoc-gen-strict-schema](../cmd/protoc-gen-strict-schema/README.md).
+
+← [README](../README.md) · [Rule coverage](rule-coverage.md)
 
 ## The pipeline
 
@@ -43,23 +47,74 @@ the same tree as the output it imports from, and buf gives each plugin entry a
 single `out`, so splitting TypeScript and Python into separate trees means
 running this plugin twice, once per language.
 
+### protoc-gen-strict-schema
+
+A second binary, `cmd/protoc-gen-strict-schema`, runs the same parser into the
+runtime-schema emitters of `generator/schemagen`. Its `main.go` has the same
+shape and calls `generator.RunSchema` (`generator/schema.go`), whose `target`
+option picks `json`, `zod` or `zod3`, any combination of them:
+
+1. **Parse every file of the request**, not only those marked `Generate`:
+   `parser.ParseFile` and `parser.ParseEnums` over all of them. A JSON Schema
+   bundle carries the `$defs` of the imported messages it reaches, so the
+   `fixesTable` has to cover them. A Zod field whose enum lives in a file
+   this run does not generate is written out from the enum's members.
+2. **Index them once**, in `schemagen.New`: messages and enums by full name,
+   the file and package each is declared in, the files to generate.
+3. **The bundles, for `target=json`**: `WriteBundles` runs protoc-gen-jsonschema
+   v0.6.0 over the same request with `target=json-bundle`, checks it wrote a
+   bundle for every top-level message of a generated file, and writes them under
+   `jsonschema/`. A plugin never sees another plugin's output, so this is the
+   only place a missing bundle can fail the run. `ExecJSONSchema` refuses
+   another version, or another plugin shipped under the same name.
+   protoschema-plugins keeps its Go code under `internal/`, so it cannot be
+   imported as a library.
+4. **One module per generated file**: `WriteJSONSchema` writes
+   `<file>.schema.ts`, `WriteZod` writes `<file>.zod.ts`, or `<file>.zod3.ts`
+   for Zod 3, so both majors fit one tree. `output=js+dts` writes
+   `.js` and `.d.ts` instead. The generator writes the declarations itself;
+   `make verify` checks they match what tsc infers for the `.ts`.
+5. **The shared modules, once per run**: `WriteJSONRuntime` writes
+   `strict/jsonschema.ts`, `fixesTable`, the fixes of every message the run's
+   bundles reach; `WriteZodRuntime` writes `strict/protovalidate.ts`, which
+   imports no zod and serves both majors, and `strict/wkt.zod.ts` or
+   `strict/wkt.zod3.ts` per major. That is why the plugin entry needs
+   `strategy: all`.
+
+`google/protobuf/*` files get no module, even when `--include-imports` marks
+them for generation. protobuf-es writes no module for them either, so there is
+no `_pb` descriptor to import, and protoschema-jsonschema writes their defs by
+hand rather than from their fields. `strict/wkt.zod.ts` and `strict/wkt.zod3.ts`
+hold one Zod schema per well-known type; `wktFixes` in `jsonschema.go` holds the two well-known defs
+`loosen` fixes, `Duration` and `BytesValue`.
+
+The Zod modules are generated from the IR, not converted from the JSON Schema.
+Zod 3 has no JSON Schema converter. Zod 4's `z.fromJSONSchema` returns a plain
+`ZodType`, which hides `.shape`, and turns the lenient aliases into a
+`z.intersection`. Third-party converters depend on a `zod` of their own rather
+than a peer, so their schemas come from another Zod instance than the caller's.
+No official Zod generator exists either, which is why AGENTS.md lets this one
+re-state protojson.
+
 ## The three packages
 
 | Package | Job |
 |---|---|
-| `main` | Entrypoint. Declares proto3-optional support, delegates to `generator.Run`. |
+| `main` | Entrypoint, one per binary. Declares proto3-optional support, delegates to `generator.Run` or `generator.RunSchema`. |
 | `internal/parser` | Reads descriptors, extracts `buf.validate` rules, translates message CEL, produces the IR. |
-| `internal/generator` | Parses the files marked for generation, then hands them to one emitter per target. |
+| `internal/generator` | Parses the files marked for generation (`Run`) or every file of the request (`RunSchema`), then hands them to one emitter per target. |
 
 One package per target, so a target's decisions cannot leak into another:
 
 | Package | Job |
 |---|---|
-| `generator` | `run.go` parses and dispatches; `options.go` holds `lang`, which picks the targets |
+| `generator` | `run.go` parses and dispatches; `options.go` holds `lang`, which picks the targets; `schema.go` is the same pair for protoc-gen-strict-schema, `RunSchema` and `target` |
 | `generator/emit` | What every emitter shares and none owns: rule comments, rule lookup, identifier casing |
+| `generator/tscode` | What the two TypeScript emitters share: identifier binding with protoc-gen-es's `$1`, JSDoc blocks, relative imports |
 | `generator/tsgen` | The TypeScript overlay |
 | `generator/pygen` | The Python overlay: the `Annotated` aliases |
 | `generator/oapigen` | `openapi_config.yaml`, the protoc-gen-openapiv2 field options |
+| `generator/schemagen` | protoc-gen-strict-schema's JSON Schema and Zod modules |
 
 Inside `generator/tsgen`:
 
@@ -73,6 +128,19 @@ Inside `generator/tsgen`:
 | `schema.go` | `<Message>StrictSchema` and `<Service>Strict` |
 | `runtime.go` | The shared `strict/types.ts` module, emitted once |
 | `names.go` | The identifiers protoc-gen-es declares |
+
+Inside `generator/schemagen`:
+
+| File | Job |
+|---|---|
+| `schemagen.go` | `Context`, the index over every parsed file and the schema names it assigns; the predicates both targets share: `ignore`, no-op rules; `Output`, the files each module is written as |
+| `bundles.go` | Runs protoc-gen-jsonschema and checks its bundles |
+| `jsonfixes.go` | The classification table: per rule, whether protoschema-jsonschema's keyword is exact and which keywords `loosen` removes. Mirrors v0.6.0 |
+| `jsonschema.go` | `<file>.schema.ts`, and `strict/jsonschema.ts` with its `fixesTable` |
+| `zodfield.go` | One field's Zod schema: which rules are native checks, which go to `field()` |
+| `zod.go` | `<file>.zod.ts`: emission order, cycles, `<message>Zod`'s `message()`; and the shared Zod modules |
+| `tsfile.go` | The import bookkeeping for one module, on `tscode`'s name table. tsgen's is bound to the overlay's `Context`, so this package has its own |
+| `runtime/*` | The hand-written modules, embedded as `.ts`, `.js` and `.d.ts`: `loosen`'s walk, `field()` and `message()`, the well-known types per Zod major |
 
 The boundary between parser and generator is deliberate. The parser knows protobuf and
 protovalidate; each generator knows one target and none of them knows the others.
@@ -94,6 +162,7 @@ type MessageMetadata struct {
 
 type FieldMetadata struct {
     Name       string  // proto name:  "user_id"
+    JSONName   string  // protojson name: "userId", or the json_name option
     ProtoType  string  // "string", "message:example.v1.Address", "enum:...", "map<string, int32>"
     Type       TypeRef // where that message or enum is declared
     Repeated   bool
@@ -102,9 +171,11 @@ type FieldMetadata struct {
     MapValue   string  // value type, set only when IsMap
     MapValType TypeRef // Type, but for MapValue
     Optional   bool    // explicit proto3 `optional`
+    Presence   bool    // absent means unset, not the zero value
+    Ignore     string  // the ignore protovalidate applies, implicit ones included
     Required   bool    // (buf.validate.field).required
     OneofName  string
-    Rules      []Rule  // {Kind: "string.min_len", Value: "3"}
+    Rules      []Rule  // {Kind: "string.min_len", Value: "3"}; a list rule also has Values
     CEL        []CELRule
 }
 
@@ -126,8 +197,9 @@ to the declaring file's package, because that is the only form that survives the
 trip. The fully qualified name alone does not say where the package ends and the
 nesting begins.
 
-There is no enum metadata. protoc-gen-es and protoc-gen-python already emit the
-enum types; the overlay only ever refers to them.
+`parser.EnumMetadata` carries an enum's members, for the Python overlay's
+zero-member alias and the Zod `z.enum`. The enum types themselves stay the
+official generators'.
 
 A message-level `CELRule` carries two more fields, filled in by `celtype.go`:
 
@@ -337,7 +409,9 @@ second place where an import can be forgotten.
 Each generator supplies only its own comment syntax, its import convention, and
 its naming convention: the IR carries the proto name, and every generator derives
 the identifier its target declares (`tsgen`'s `localName` mirrors protobuf-es,
-`emit.Pascal` is the alias fragment for Python).
+`emit.Pascal` is the alias fragment for Python). The two TypeScript emitters,
+`tsgen` and `schemagen`, share their comment syntax and import convention
+through `generator/tscode`.
 
 A symbol only one target uses belongs in that target's package, not in `emit`.
 
@@ -382,6 +456,21 @@ rest: an override that does not narrow its property is a compile error in the
 generated file itself.
 
 It needs network, npm and python3, which is why it is not in `make check`.
+
+protoc-gen-strict-schema has the same two layers. `schema_golden_test.go` feeds
+the same descriptor set through `generator.RunSchema` into four trees under
+`internal/testdata/golden-schema/` (`default`, `zod3`, `js`, `zod3-js`). The
+JSON Schema bundles come from `internal/testdata/jsonschema/`, which `make
+testdata` writes, so the test needs no protoc-gen-jsonschema. `make verify`
+then runs two npm projects, since Zod 3 and Zod 4 cannot both be installed as
+`zod`: `verify/assert.schema.ts` (zod 4, ajv) and `verify-zod3/assert.ts`
+(zod 3). `verify/` also type-checks the `zod3` modules against zod 4's `zod/v3`,
+generated next to the `zod` ones. Both check the schemas against protovalidate-es over the corpus in
+`internal/testdata/schema-corpus.ts`, share their expectations and helpers
+through `internal/testdata/schema-harness.ts`, and list their checks in their
+header.
+`proto/shop/schema/v1/schema.proto` is their fixture: one field per row of the
+tables in [Rule coverage: runtime schemas](rule-coverage-schema.md).
 
 The example proto is the fixture. It deliberately exercises the awkward cases
 (both CEL forms, a repeated field with item rules, a message-typed field, a

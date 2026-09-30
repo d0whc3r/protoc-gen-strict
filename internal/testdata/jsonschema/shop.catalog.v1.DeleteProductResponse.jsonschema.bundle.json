@@ -1,0 +1,15 @@
+{
+  "$defs": {
+    "shop.catalog.v1.DeleteProductResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "DeleteProductResponse is intentionally empty.",
+      "properties": {},
+      "title": "Delete Product Response",
+      "type": "object"
+    }
+  },
+  "$id": "shop.catalog.v1.DeleteProductResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.catalog.v1.DeleteProductResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

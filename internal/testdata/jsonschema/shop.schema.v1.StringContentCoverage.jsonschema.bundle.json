@@ -1,0 +1,200 @@
+{
+  "$defs": {
+    "shop.schema.v1.StringContentCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "StringContentCoverage has one field per string length and content rule.",
+      "patternProperties": {
+        "^(const_value)$": {
+          "description": "A single literal.",
+          "enum": [
+            "fixed"
+          ],
+          "type": "string"
+        },
+        "^(exact_len)$": {
+          "description": "Code points, not UTF-16 units.",
+          "maxLength": 4,
+          "minLength": 4,
+          "type": "string"
+        },
+        "^(in_set)$": {
+          "description": "A value holding a comma and a space, next to a plain one.",
+          "enum": [
+            "a, b",
+            "c"
+          ],
+          "type": "string"
+        },
+        "^(len_bytes)$": {
+          "description": "len_bytes without max_bytes: protoschema-jsonschema emits maxLength 0.",
+          "maxLength": 0,
+          "type": "string"
+        },
+        "^(max_bytes)$": {
+          "description": "UTF-8 bytes, emitted as a looser maxLength.",
+          "maxLength": 8,
+          "type": "string"
+        },
+        "^(max_len)$": {
+          "description": "Code points, not UTF-16 units.",
+          "maxLength": 8,
+          "type": "string"
+        },
+        "^(min_bytes)$": {
+          "description": "UTF-8 bytes, not emitted by protoschema-jsonschema.",
+          "type": "string"
+        },
+        "^(min_len)$": {
+          "description": "Code points, not UTF-16 units.",
+          "minLength": 2,
+          "type": "string"
+        },
+        "^(not_contains)$": {
+          "description": "Not emitted by protoschema-jsonschema.",
+          "type": "string"
+        },
+        "^(not_in_set)$": {
+          "description": "Not emitted by protoschema-jsonschema.",
+          "type": "string"
+        },
+        "^(pattern_inline_flag)$": {
+          "description": "Valid RE2, a syntax error in ECMA-262.",
+          "pattern": "(?i)^abc$",
+          "type": "string"
+        },
+        "^(pattern_non_space)$": {
+          "description": "Valid in both, but \\s matches U+00A0 in ECMA-262 only.",
+          "pattern": "^\\S+$",
+          "type": "string"
+        },
+        "^(prefix_and_suffix)$": {
+          "description": "Becomes ^pre.*suf$ upstream, which fails across a line break.",
+          "pattern": "^pre.*suf$",
+          "type": "string"
+        },
+        "^(uuid_pattern)$": {
+          "description": "uuid next to a pattern: upstream writes the pattern over the uuid one.",
+          "pattern": "^[a-f0-9-]+$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "code": {
+          "description": "A native rule and a field CEL rule on one field.",
+          "minLength": 2,
+          "type": "string"
+        },
+        "constValue": {
+          "description": "A single literal.",
+          "enum": [
+            "fixed"
+          ],
+          "type": "string"
+        },
+        "contains": {
+          "description": "Becomes an unescaped regex upstream.",
+          "pattern": ".*..*",
+          "type": "string"
+        },
+        "escaped": {
+          "description": "A quote, a backslash, a comment terminator and U+2028 in rule values and\n CEL, each escaped for the target it lands in.",
+          "enum": [
+            "\"\\*/\u2028",
+            "\"\\*/x"
+          ],
+          "pattern": "^\"\\*/.*",
+          "type": "string"
+        },
+        "exactLen": {
+          "description": "Code points, not UTF-16 units.",
+          "maxLength": 4,
+          "minLength": 4,
+          "type": "string"
+        },
+        "inSet": {
+          "description": "A value holding a comma and a space, next to a plain one.",
+          "enum": [
+            "a, b",
+            "c"
+          ],
+          "type": "string"
+        },
+        "lenBytes": {
+          "description": "len_bytes without max_bytes: protoschema-jsonschema emits maxLength 0.",
+          "maxLength": 0,
+          "type": "string"
+        },
+        "maxBytes": {
+          "description": "UTF-8 bytes, emitted as a looser maxLength.",
+          "maxLength": 8,
+          "type": "string"
+        },
+        "maxLen": {
+          "description": "Code points, not UTF-16 units.",
+          "maxLength": 8,
+          "type": "string"
+        },
+        "minBytes": {
+          "description": "UTF-8 bytes, not emitted by protoschema-jsonschema.",
+          "type": "string"
+        },
+        "minLen": {
+          "description": "Code points, not UTF-16 units.",
+          "minLength": 2,
+          "type": "string"
+        },
+        "nickname": {
+          "description": "required on a field with presence: \"\" is a valid set value.",
+          "type": "string"
+        },
+        "notContains": {
+          "description": "Not emitted by protoschema-jsonschema.",
+          "type": "string"
+        },
+        "notInSet": {
+          "description": "Not emitted by protoschema-jsonschema.",
+          "type": "string"
+        },
+        "patternInlineFlag": {
+          "description": "Valid RE2, a syntax error in ECMA-262.",
+          "pattern": "(?i)^abc$",
+          "type": "string"
+        },
+        "patternNonSpace": {
+          "description": "Valid in both, but \\s matches U+00A0 in ECMA-262 only.",
+          "pattern": "^\\S+$",
+          "type": "string"
+        },
+        "prefix": {
+          "description": "Becomes the invalid regex ^+1.* upstream.",
+          "pattern": "^+1.*",
+          "type": "string"
+        },
+        "prefixAndSuffix": {
+          "description": "Becomes ^pre.*suf$ upstream, which fails across a line break.",
+          "pattern": "^pre.*suf$",
+          "type": "string"
+        },
+        "suffix": {
+          "description": "Becomes an unescaped regex upstream.",
+          "pattern": ".*.io$",
+          "type": "string"
+        },
+        "uuidPattern": {
+          "description": "uuid next to a pattern: upstream writes the pattern over the uuid one.",
+          "pattern": "^[a-f0-9-]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "nickname"
+      ],
+      "title": "String Content Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.StringContentCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.StringContentCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

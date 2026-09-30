@@ -114,12 +114,20 @@ func parseMessage(msg *protogen.Message) (MessageMetadata, error) {
 	}
 
 	// `(buf.validate.message).oneof` declares exclusivity over fields that are
-	// not in a real oneof; surface it the same way.
+	// not in a real oneof; surface it the same way. protovalidate also gives a
+	// member that sets no `ignore` of its own IGNORE_IF_ZERO_VALUE, so its zero
+	// value is the "not this one" of the oneof rather than a value its rules
+	// reject. Every generator reads Ignore, so it is resolved once, here.
 	for _, rule := range rules.GetOneof() {
 		out.Oneofs = append(out.Oneofs, OneofMetadata{
 			Fields:   rule.GetFields(),
 			Required: rule.GetRequired(),
 		})
+		for i := range out.Fields {
+			if out.Fields[i].Ignore == "" && slices.Contains(rule.GetFields(), out.Fields[i].Name) {
+				out.Fields[i].Ignore = validate.Ignore_IGNORE_IF_ZERO_VALUE.String()
+			}
+		}
 	}
 	return out, nil
 }
@@ -131,11 +139,13 @@ func parseField(field *protogen.Field) (FieldMetadata, error) {
 	desc := field.Desc
 	meta := FieldMetadata{
 		Name:       string(desc.Name()),
+		JSONName:   desc.JSONName(),
 		ProtoType:  protoTypeName(desc),
 		Type:       typeRef(desc),
 		Repeated:   desc.IsList(),
 		IsMap:      desc.IsMap(),
 		Optional:   desc.HasOptionalKeyword(),
+		Presence:   desc.HasPresence(),
 		OutputOnly: outputOnly(desc),
 	}
 	if desc.IsMap() {
@@ -154,6 +164,9 @@ func parseField(field *protogen.Field) (FieldMetadata, error) {
 
 	meta.Required = rules.GetRequired()
 	meta.Rules = standardRules(rules)
+	if ignore := rules.GetIgnore(); ignore != validate.Ignore_IGNORE_UNSPECIFIED {
+		meta.Ignore = ignore.String()
+	}
 
 	// A field rule roots `this` at the field, not at a message, so there is no
 	// path to resolve and nothing to translate.

@@ -2,21 +2,26 @@
 
 Behavioral rules for coding agents working on `protoc-gen-strict`.
 
-**What this repo is:** a protoc/buf plugin. It reads protovalidate (`buf.validate`)
-rules, custom CEL expressions included, off proto descriptors and emits a strict
-overlay on the code the official generators produce: protoc-gen-es for
-TypeScript, protoc-gen-python for Python, plus a field-options file for
-protoc-gen-openapiv2. Rules that have an equivalent in the target become part of
-its output; the rest are named in the generated doc comment.
+**What this repo is:** two protoc/buf plugins. Both read protovalidate
+(`buf.validate`) rules, custom CEL expressions included, off proto descriptors.
+`protoc-gen-strict` emits a strict overlay on the code the official generators
+produce: protoc-gen-es for TypeScript, protoc-gen-python for Python, plus a
+field-options file for protoc-gen-openapiv2. `protoc-gen-strict-schema` emits
+runtime schemas: JSON Schema and Zod. Rules that have an equivalent in the
+target become part of its output; the rest are named in the generated doc
+comment.
 
 ```
 cmd/protoc-gen-strict         plugin entrypoint, protogen.Options{}.Run
+cmd/protoc-gen-strict-schema  second plugin: runtime schemas, generator.RunSchema
 internal/parser               descriptors + buf.validate extensions → MessageMetadata (IR)
 internal/generator            parses, then dispatches to one emitter per target
 internal/generator/emit       what every emitter shares: rule comments, rule lookup, casing
+internal/generator/tscode     what both TypeScript emitters share: identifier binding, JSDoc, relative imports
 internal/generator/tsgen      IR → TypeScript overlay, plus the shared strict/types.ts
 internal/generator/pygen      IR → Python overlay
 internal/generator/oapigen    IR → openapi_config.yaml
+internal/generator/schemagen  IR → <file>.schema.ts (JSON Schema), <file>.zod.ts, <file>.zod3.ts, their strict/ modules
 proto/                        fixture protos; `internal/testdata` holds the golden output
 ```
 
@@ -25,14 +30,23 @@ proto/                        fixture protos; `internal/testdata` holds the gold
 generator here derives its types from that output (`User["roles"]`) or imports
 them; it does not carry a type mapping of its own. A second opinion is a bug.
 
+One exception: the Zod targets of `protoc-gen-strict-schema`. No official Zod
+generator exists, so `schemagen` re-states protojson. `make verify` guards the
+mapping: `z.input` of each `<message>Zod` is type-checked against protobuf-es's
+`json_types=true` `<Message>Json`, and each `<message>Zod` must parse the
+`toJson` output of a sample message.
+
 **Under-narrowing is the safe direction.** A rule translated in part, or not at
 all, has to be named in the generated JSDoc under "Left to runtime validation".
 A rule that quietly stops being carried is worse than one that was never carried.
 Adding a narrowing means adding a row to the coverage doc of every target that
 carries it ([TypeScript](docs/rule-coverage-typescript.md),
 [Python](docs/rule-coverage-python.md),
-[OpenAPI](docs/rule-coverage-openapi.md)) and an assertion to
-`internal/testdata/verify/assert.ts`.
+[OpenAPI](docs/rule-coverage-openapi.md),
+[runtime schemas](docs/rule-coverage-schema.md)) and an assertion to
+`internal/testdata/verify/assert.ts`; for the runtime schemas, a fixture field in
+`proto/shop/schema/v1/schema.proto` and its inputs in
+`internal/testdata/schema-corpus.ts`.
 
 ## 1. Think Before Coding
 
@@ -105,7 +119,8 @@ make test           # go test ./...
 Changed what the generated types look like → `make verify` too. It compiles the
 overlay against the real protoc-gen-es output and imports the real generated
 Python, which is the only check that catches an overlay that no longer resolves.
-It needs network, npm and python3.
+It also runs the runtime schemas against protovalidate-es, under Zod 4 and
+Zod 3. It needs network, npm and python3.
 
 Changed the generated output → the golden tests in `make test` will fail with a
 diff. **Read the diff before accepting it.** Once it is what you meant, run

@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "shop.schema.v1.CollectionCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "CollectionCoverage has one field per repeated and map shape.",
+      "patternProperties": {
+        "^(by_number)$": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "JSON keys are strings: decimal integers.",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              },
+              {
+                "pattern": "^-?[0-9]+$",
+                "type": "string"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "^(items_by_key)$": {
+          "additionalProperties": {
+            "$ref": "#/$defs/shop.schema.v1.Item.jsonschema.json"
+          },
+          "description": "A map of messages.",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "properties": {
+        "bounded": {
+          "description": "Item count bounds.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "type": "array"
+        },
+        "byNumber": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "JSON keys are strings: decimal integers.",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              },
+              {
+                "pattern": "^-?[0-9]+$",
+                "type": "string"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "flags": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "JSON keys are strings: \"true\" and \"false\".",
+          "propertyNames": {
+            "type": "boolean"
+          },
+          "type": "object"
+        },
+        "items": {
+          "description": "A list of messages.",
+          "items": {
+            "$ref": "#/$defs/shop.schema.v1.Item.jsonschema.json"
+          },
+          "type": "array"
+        },
+        "itemsByKey": {
+          "additionalProperties": {
+            "$ref": "#/$defs/shop.schema.v1.Item.jsonschema.json"
+          },
+          "description": "A map of messages.",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+            "type": "string"
+          },
+          "description": "Size, key and value rules on one map.",
+          "propertyNames": {
+            "minLength": 2,
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "links": {
+          "description": "An element format with no exact equivalent.",
+          "items": {
+            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "names": {
+          "description": "An element rule with a native equivalent.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "unique": {
+          "description": "Left to protovalidate.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Collection Coverage",
+      "type": "object"
+    },
+    "shop.schema.v1.Item.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Item is the rule-bearing message other fixtures reference. Its empty\n instance is valid, so a reference to it tests presence and nesting only.",
+      "properties": {
+        "text": {
+          "description": "Bounded when set.",
+          "maxLength": 32,
+          "type": "string"
+        }
+      },
+      "title": "Item",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.CollectionCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.CollectionCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

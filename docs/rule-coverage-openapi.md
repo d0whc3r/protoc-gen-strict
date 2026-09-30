@@ -16,7 +16,6 @@ openapiOptions:
       option:
         maxLength: 32
         minLength: 3
-        pattern: "^[A-Z0-9]+(-[A-Z0-9]+)*$"
 ```
 
 The `.proto` files stay free of OpenAPI annotations and the generated JSON is
@@ -33,13 +32,12 @@ never patched. Two properties fall out of the format:
 
 | Rule | Becomes |
 |---|---|
-| `string.uuid`, `string.email`, `string.uri`, `string.hostname`, `string.ipv4`, `string.ipv6` | `format` |
+| `string.uuid`, `string.hostname`, `string.ipv4` | `format` |
 | `string.len` | `minLength` and `maxLength`, both |
 | `string.min_len`, `string.max_len` | `minLength`, `maxLength` |
-| `string.pattern` | `pattern`, the RE2 source quoted |
-| `gte`, `lte` on a 32-bit integer, `float` or `double` | `minimum`, `maximum` |
+| `gte`, `lte` on a 32-bit integer or a `double` | `minimum`, `maximum` |
 | `gt`, `lt` on a 32-bit integer | the inclusive bound one step away: `gt: 0` is `minimum: 1` |
-| `gt`, `lt` on a `float` or `double` | `minimum` + `exclusiveMinimum`, `maximum` + `exclusiveMaximum` |
+| `gt`, `lt` on a `double` | `minimum` + `exclusiveMinimum`, `maximum` + `exclusiveMaximum` |
 | `repeated.min_items`, `repeated.max_items` | `minItems`, `maxItems` |
 | `repeated.unique = true` | `uniqueItems` |
 | `map.min_pairs`, `map.max_pairs` | `minProperties`, `maxProperties` |
@@ -63,6 +61,12 @@ Unlike the TypeScript overlay, the exact bound survives. `min_len: 3` is
   per-field `enum` keyword beside a `$ref` is dropped by the readers, so there is
   nothing for the config to say. Set the flag, as `buf.gen.openapi.yaml` does.
 - **`const`, `in` and `not_in`,** on every type.
+- **`string.pattern`.** It is RE2; a JSONSchema `pattern` is ECMA-262. `(?i)`
+  and `(?P<name>…)` do not compile there, and `\s` also matches U+00A0, so
+  `^\S+$` rejects a value protovalidate accepts.
+- **`string.email`, `string.ipv6`, `string.uri`.** Their `format` is
+  validator-defined, and ajv-formats rejects `user@localhost`, `fe80::1%eth0`
+  and `http://[fe80::1%25eth0]/`, which protovalidate accepts.
 - **`(google.api.field_behavior)`.** protoc-gen-openapiv2 reads the annotation
   itself — `OUTPUT_ONLY` becomes `readOnly: true`, `REQUIRED` joins the parent's
   required list — so a second opinion in the config would only fight it. The
@@ -81,9 +85,15 @@ Unlike the TypeScript overlay, the exact bound survives. `min_len: 3` is
   becomes mandatory on a request whose `minPrice` filter is optional. Over-
   narrowing a request is worse than leaving the rule to runtime validation, so
   the rule is not carried at all.
+- **A `float` bound.** protovalidate compares the value rounded to float32:
+  `lte: 0.1` admits `0.1000000001`, which rounds to `0.1f`, and `maximum: 0.1`
+  rejects it. `double` bounds are carried.
 - **Every rule on a field with `ignore` set,** the same call the TypeScript
   overlay makes: the rules do not always apply, so none of them describes the
-  schema. `repeated.items.ignore` says the same of the element rules, and only of
+  schema. That includes a member of a `(buf.validate.message).oneof`, which
+  protovalidate gives `IGNORE_IF_ZERO_VALUE` unless it sets an `ignore` of its
+  own.
+  `repeated.items.ignore` says the same of the element rules, and only of
   those: the list's own `min_items` still holds.
 - **A reversed numeric range.** protovalidate reads a lower bound above the upper
   one as a disjunction — `{gt: 20, lt: 10}` admits everything outside 10..20 —

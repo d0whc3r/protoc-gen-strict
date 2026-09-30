@@ -1,0 +1,72 @@
+{
+  "$defs": {
+    "shop.schema.v1.JsonNameCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "JsonNameCoverage has fields whose JSON name differs from the proto name\n in ways a naive camelCase conversion gets wrong.",
+      "patternProperties": {
+        "^(display_name)$": {
+          "default": "",
+          "description": "The ordinary case: the JSON name is displayName.",
+          "maxLength": 64,
+          "type": "string"
+        },
+        "^(external_id)$": {
+          "default": "",
+          "description": "json_name renames the JSON key; protobuf-es still names the property\n externalId.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "^(metric_1st)$": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "A digit after the underscore: the JSON name is metric1st."
+        }
+      },
+      "properties": {
+        "displayName": {
+          "default": "",
+          "description": "The ordinary case: the JSON name is displayName.",
+          "maxLength": 64,
+          "type": "string"
+        },
+        "extId": {
+          "default": "",
+          "description": "json_name renames the JSON key; protobuf-es still names the property\n externalId.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "metric1st": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "A digit after the underscore: the JSON name is metric1st."
+        }
+      },
+      "title": "Json Name Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.JsonNameCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.JsonNameCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

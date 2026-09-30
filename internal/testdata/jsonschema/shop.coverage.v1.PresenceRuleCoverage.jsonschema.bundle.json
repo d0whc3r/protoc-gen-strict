@@ -1,0 +1,247 @@
+{
+  "$defs": {
+    "shop.coverage.v1.PresenceRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "PresenceRuleCoverage exercises required, optional and the ignore modes that\n decide when the other rules are evaluated at all.",
+      "patternProperties": {
+        "^(never_checked)$": {
+          "default": "",
+          "description": "Validation is switched off entirely for this field. protovalidate rejects\n combining IGNORE_ALWAYS with other rules, so this carries nothing else.",
+          "type": "string"
+        },
+        "^(optional_value)$": {
+          "description": "Explicit proto3 optional with rules that apply only when present.",
+          "minLength": 3,
+          "type": "string"
+        },
+        "^(required_message)$": {
+          "$ref": "#/$defs/shop.coverage.v1.StringRuleCoverage.jsonschema.json",
+          "description": "A required message field."
+        },
+        "^(required_value)$": {
+          "description": "Must be set and non-empty.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "^(skip_when_empty)$": {
+          "default": "",
+          "description": "Rules are skipped when the field holds its zero value.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "neverChecked": {
+          "default": "",
+          "description": "Validation is switched off entirely for this field. protovalidate rejects\n combining IGNORE_ALWAYS with other rules, so this carries nothing else.",
+          "type": "string"
+        },
+        "optionalValue": {
+          "description": "Explicit proto3 optional with rules that apply only when present.",
+          "minLength": 3,
+          "type": "string"
+        },
+        "requiredMessage": {
+          "$ref": "#/$defs/shop.coverage.v1.StringRuleCoverage.jsonschema.json",
+          "description": "A required message field."
+        },
+        "requiredValue": {
+          "description": "Must be set and non-empty.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "skipWhenEmpty": {
+          "default": "",
+          "description": "Rules are skipped when the field holds its zero value.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requiredValue",
+        "requiredMessage"
+      ],
+      "title": "Presence Rule Coverage",
+      "type": "object"
+    },
+    "shop.coverage.v1.StringRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "StringRuleCoverage exercises the string rule family, including the\n well-known format rules that live in a oneof inside StringRules.",
+      "patternProperties": {
+        "^(byte_bounds)$": {
+          "default": "",
+          "description": "Byte length bounds, which differ from character length for non-ASCII.",
+          "maxLength": 128,
+          "type": "string"
+        },
+        "^(exact_len)$": {
+          "default": "",
+          "description": "Exact character length.",
+          "maxLength": 10,
+          "minLength": 10,
+          "type": "string"
+        },
+        "^(header_name)$": {
+          "default": "",
+          "description": "Well-known format: HTTP header name, matched strictly.",
+          "type": "string"
+        },
+        "^(host_and_port)$": {
+          "default": "",
+          "description": "Well-known format: host:port pair.",
+          "pattern": "^([A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|\\[(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)\\]):([1-9][0-9]{0,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+          "type": "string"
+        },
+        "^(ip_prefix)$": {
+          "default": "",
+          "description": "Well-known format: CIDR prefix.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "^(len_bounds)$": {
+          "default": "",
+          "description": "Character length bounds.",
+          "maxLength": 64,
+          "minLength": 2,
+          "type": "string"
+        },
+        "^(uri_ref)$": {
+          "default": "",
+          "description": "Well-known format: relative URI reference.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?:\\/\\/(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "affixes": {
+          "default": "",
+          "description": "Substring rules.",
+          "pattern": "^id_.*-.*_v1$",
+          "type": "string"
+        },
+        "byteBounds": {
+          "default": "",
+          "description": "Byte length bounds, which differ from character length for non-ASCII.",
+          "maxLength": 128,
+          "type": "string"
+        },
+        "constant": {
+          "default": "",
+          "description": "Fixed value.",
+          "enum": [
+            "fixed"
+          ],
+          "type": "string"
+        },
+        "email": {
+          "default": "",
+          "description": "Well-known format: email address.",
+          "format": "email",
+          "type": "string"
+        },
+        "enumerated": {
+          "default": "",
+          "description": "Membership rules.",
+          "enum": [
+            "alpha",
+            "beta",
+            "stable"
+          ],
+          "type": "string"
+        },
+        "exactLen": {
+          "default": "",
+          "description": "Exact character length.",
+          "maxLength": 10,
+          "minLength": 10,
+          "type": "string"
+        },
+        "headerName": {
+          "default": "",
+          "description": "Well-known format: HTTP header name, matched strictly.",
+          "type": "string"
+        },
+        "hostAndPort": {
+          "default": "",
+          "description": "Well-known format: host:port pair.",
+          "pattern": "^([A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|\\[(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)\\]):([1-9][0-9]{0,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+          "type": "string"
+        },
+        "hostname": {
+          "default": "",
+          "description": "Well-known format: hostname.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*$",
+          "type": "string"
+        },
+        "ip": {
+          "default": "",
+          "description": "Well-known format: IP address of either version.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)$",
+          "type": "string"
+        },
+        "ipPrefix": {
+          "default": "",
+          "description": "Well-known format: CIDR prefix.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "ipv4": {
+          "default": "",
+          "description": "Well-known format: IPv4 address.",
+          "format": "ipv4",
+          "type": "string"
+        },
+        "ipv6": {
+          "default": "",
+          "description": "Well-known format: IPv6 address.",
+          "format": "ipv6",
+          "type": "string"
+        },
+        "lenBounds": {
+          "default": "",
+          "description": "Character length bounds.",
+          "maxLength": 64,
+          "minLength": 2,
+          "type": "string"
+        },
+        "pattern": {
+          "default": "",
+          "description": "Must match a regular expression.",
+          "pattern": "^[a-z]+(_[a-z]+)*$",
+          "type": "string"
+        },
+        "tuuid": {
+          "default": "",
+          "description": "Well-known format: trimmed UUID (no dashes).",
+          "pattern": "^[0-9a-fA-F]{32}$",
+          "type": "string"
+        },
+        "uri": {
+          "default": "",
+          "description": "Well-known format: URI.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        },
+        "uriRef": {
+          "default": "",
+          "description": "Well-known format: relative URI reference.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?:\\/\\/(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        },
+        "uuid": {
+          "default": "",
+          "description": "Well-known format: UUID.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "title": "String Rule Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.coverage.v1.PresenceRuleCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.coverage.v1.PresenceRuleCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

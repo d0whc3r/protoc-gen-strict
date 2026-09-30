@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "shop.common.v1.Money.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Money is a fixed-point amount, split into whole units and nanos the way\n google.type.Money does.",
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "enum": [
+                "CURRENCY_EUR",
+                "CURRENCY_USD",
+                "CURRENCY_GBP"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ],
+          "description": "The currency of the amount.",
+          "title": "Currency"
+        },
+        "nanos": {
+          "anyOf": [
+            {
+              "maximum": 999999999,
+              "minimum": -999999999,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fractional part in nanos, e.g. 500000000 for 12.50 EUR."
+        },
+        "units": {
+          "anyOf": [
+            {
+              "maximum": 1000000000,
+              "minimum": -1000000000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Whole currency units, e.g. 12 for 12.50 EUR."
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "Money",
+      "type": "object"
+    }
+  },
+  "$id": "shop.common.v1.Money.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
