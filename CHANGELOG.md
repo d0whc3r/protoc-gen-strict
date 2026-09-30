@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.3...v1.1.4) (2026-09-29)
+
+
+### Bug Fixes
+
+* Warm Go proxy cache after release tag is created ([1abf064](https://github.com/d0whc3r/protoc-gen-strict/commit/1abf0645fcdc028693592a524118e4427476aad2))
+
 ## [1.1.3](https://github.com/d0whc3r/protoc-gen-strict/compare/v1.1.2...v1.1.3) (2026-09-29)
 
 
