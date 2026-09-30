@@ -316,7 +316,9 @@ single type cannot see.
   `IGNORE_IF_ZERO_VALUE` admits the zero value alongside whatever they allow,
   which leaves `min_len` and `min_items` saying nothing and turns the rest into a
   union with the zero. Rather than reason per rule, the whole field is left to
-  runtime validation. Under-narrowing is the safe direction.
+  runtime validation. Under-narrowing is the safe direction. That includes
+  a member of a `(buf.validate.message).oneof`, which protovalidate gives
+  `IGNORE_IF_ZERO_VALUE` unless it sets an `ignore` of its own.
 
   `IGNORE_ALWAYS` on a message field goes further: protovalidate stops recursing
   into the message, so the field keeps the generated type rather than the

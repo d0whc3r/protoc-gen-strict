@@ -1,0 +1,170 @@
+{
+  "$defs": {
+    "shop.schema.v1.ImplicitCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "ImplicitCoverage has implicit-presence fields whose zero value breaks a\n rule. protojson omits zero values, so the rule has to fire for an absent key.",
+      "patternProperties": {
+        "^(required_count)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "required: must not be 0."
+        },
+        "^(required_item)$": {
+          "$ref": "#/$defs/shop.schema.v1.Item.jsonschema.json",
+          "description": "required: must be present."
+        },
+        "^(required_name)$": {
+          "description": "required: must not be \"\".",
+          "type": "string"
+        },
+        "^(required_tags)$": {
+          "description": "required: must not be empty.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(short_code)$": {
+          "default": "",
+          "description": "\"\" is too short.",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "properties": {
+        "accepted": {
+          "description": "required: must be true.",
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "enum": [
+                "SCHEMA_COLOR_RED",
+                "SCHEMA_COLOR_GREEN",
+                "SCHEMA_COLOR_BLUE"
+              ],
+              "type": "string"
+            },
+            {
+              "exclusiveMaximum": 0,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 2147483647,
+              "type": "integer"
+            }
+          ],
+          "description": "required: must not be the zero member.",
+          "title": "Schema Color"
+        },
+        "count": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "0 is out of range."
+        },
+        "email": {
+          "default": "",
+          "description": "\"\" is not an email address.",
+          "format": "email",
+          "type": "string"
+        },
+        "requiredCount": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "required: must not be 0."
+        },
+        "requiredItem": {
+          "$ref": "#/$defs/shop.schema.v1.Item.jsonschema.json",
+          "description": "required: must be present."
+        },
+        "requiredName": {
+          "description": "required: must not be \"\".",
+          "type": "string"
+        },
+        "requiredTags": {
+          "description": "required: must not be empty.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "shortCode": {
+          "default": "",
+          "description": "\"\" is too short.",
+          "minLength": 3,
+          "type": "string"
+        },
+        "tags": {
+          "description": "[] is too short.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "requiredName",
+        "requiredCount",
+        "accepted",
+        "color",
+        "requiredTags",
+        "requiredItem"
+      ],
+      "title": "Implicit Coverage",
+      "type": "object"
+    },
+    "shop.schema.v1.Item.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Item is the rule-bearing message other fixtures reference. Its empty\n instance is valid, so a reference to it tests presence and nesting only.",
+      "properties": {
+        "text": {
+          "description": "Bounded when set.",
+          "maxLength": 32,
+          "type": "string"
+        }
+      },
+      "title": "Item",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.ImplicitCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.ImplicitCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

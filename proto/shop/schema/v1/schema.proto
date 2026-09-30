@@ -1,0 +1,562 @@
+syntax = "proto3";
+
+// Package shop.schema.v1 is not a realistic API. It is the fixture for
+// protoc-gen-strict-schema: one field per row of the JSON Schema and Zod
+// tables in docs/rule-coverage-schema.md, so each row can be checked against
+// protovalidate on its own.
+package shop.schema.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// SchemaColor exercises the enum rules and the enum JSON shape.
+enum SchemaColor {
+  // Unset color.
+  SCHEMA_COLOR_UNSPECIFIED = 0;
+  // Red.
+  SCHEMA_COLOR_RED = 1;
+  // Green.
+  SCHEMA_COLOR_GREEN = 2;
+  // Blue.
+  SCHEMA_COLOR_BLUE = 3;
+}
+
+// Item is the rule-bearing message other fixtures reference. Its empty
+// instance is valid, so a reference to it tests presence and nesting only.
+message Item {
+  // Bounded when set.
+  optional string text = 1 [(buf.validate.field).string.max_len = 32];
+}
+
+// FormatCoverage has one field per string well-known format. Every field has
+// explicit presence, so a test can set one at a time.
+message FormatCoverage {
+  // protoschema-jsonschema's pattern rejects a trailing dot.
+  optional string hostname = 1 [(buf.validate.field).string.hostname = true];
+  // format "email" is validator-defined.
+  optional string email = 2 [(buf.validate.field).string.email = true];
+  // The pattern has no zone ids and no embedded IPv4.
+  optional string ip = 3 [(buf.validate.field).string.ip = true];
+  // format "ipv4" matches protovalidate.
+  optional string ipv4 = 4 [(buf.validate.field).string.ipv4 = true];
+  // format "ipv6" is validator-defined.
+  optional string ipv6 = 5 [(buf.validate.field).string.ipv6 = true];
+  // The pattern rejects mailto:, urn: and userinfo.
+  optional string uri = 6 [(buf.validate.field).string.uri = true];
+  // As uri, relative references included.
+  optional string uri_ref = 7 [(buf.validate.field).string.uri_ref = true];
+  // Hostname or IP: inherits both patterns.
+  optional string address = 8 [(buf.validate.field).string.address = true];
+  // The pattern rejects port 0.
+  optional string host_and_port = 9 [(buf.validate.field).string.host_and_port = true];
+  // The pattern rejects an embedded IPv4.
+  optional string ip_with_prefixlen = 10 [(buf.validate.field).string.ip_with_prefixlen = true];
+  // The pattern is looser than protovalidate.
+  optional string ipv4_with_prefixlen = 11 [(buf.validate.field).string.ipv4_with_prefixlen = true];
+  // The pattern rejects an embedded IPv4.
+  optional string ipv6_with_prefixlen = 12 [(buf.validate.field).string.ipv6_with_prefixlen = true];
+  // The pattern expects a literal 0 or :: in place of the host bits.
+  optional string ip_prefix = 13 [(buf.validate.field).string.ip_prefix = true];
+  // As ip_prefix, IPv4 only.
+  optional string ipv4_prefix = 14 [(buf.validate.field).string.ipv4_prefix = true];
+  // As ip_prefix, IPv6 only.
+  optional string ipv6_prefix = 15 [(buf.validate.field).string.ipv6_prefix = true];
+  // A fixed regex, copied verbatim.
+  optional string uuid = 16 [(buf.validate.field).string.uuid = true];
+  // A fixed regex, copied verbatim.
+  optional string tuuid = 17 [(buf.validate.field).string.tuuid = true];
+  // A fixed regex protoschema-jsonschema does not emit.
+  optional string ulid = 18 [(buf.validate.field).string.ulid = true];
+  // A fixed regex protoschema-jsonschema does not emit.
+  optional string protobuf_fqn = 19 [(buf.validate.field).string.protobuf_fqn = true];
+  // A fixed regex protoschema-jsonschema does not emit.
+  optional string protobuf_dot_fqn = 20 [(buf.validate.field).string.protobuf_dot_fqn = true];
+  // strict set explicitly: the emitted pattern breaks under the u flag.
+  optional string header_name = 21 [(buf.validate.field).string = {
+    well_known_regex: KNOWN_REGEX_HTTP_HEADER_NAME
+    strict: true
+  }];
+  // strict left unset: protoschema-jsonschema emits nothing.
+  optional string header_value = 22 [(buf.validate.field).string.well_known_regex = KNOWN_REGEX_HTTP_HEADER_VALUE];
+  // jsonschema:hide. Upstream moves a hidden field into patternProperties,
+  // where its pattern still rejects a trailing dot.
+  optional string hidden_host = 23 [(buf.validate.field).string.hostname = true];
+}
+
+// StringContentCoverage has one field per string length and content rule.
+message StringContentCoverage {
+  // Code points, not UTF-16 units.
+  optional string min_len = 1 [(buf.validate.field).string.min_len = 2];
+  // Code points, not UTF-16 units.
+  optional string max_len = 2 [(buf.validate.field).string.max_len = 8];
+  // Code points, not UTF-16 units.
+  optional string exact_len = 3 [(buf.validate.field).string.len = 4];
+  // len_bytes without max_bytes: protoschema-jsonschema emits maxLength 0.
+  optional string len_bytes = 4 [(buf.validate.field).string.len_bytes = 4];
+  // UTF-8 bytes, not emitted by protoschema-jsonschema.
+  optional string min_bytes = 5 [(buf.validate.field).string.min_bytes = 2];
+  // UTF-8 bytes, emitted as a looser maxLength.
+  optional string max_bytes = 6 [(buf.validate.field).string.max_bytes = 8];
+  // Valid RE2, a syntax error in ECMA-262.
+  optional string pattern_inline_flag = 7 [(buf.validate.field).string.pattern = "(?i)^abc$"];
+  // Valid in both, but \s matches U+00A0 in ECMA-262 only.
+  optional string pattern_non_space = 8 [(buf.validate.field).string.pattern = "^\\S+$"];
+  // Becomes the invalid regex ^+1.* upstream.
+  optional string prefix = 9 [(buf.validate.field).string.prefix = "+1"];
+  // Becomes an unescaped regex upstream.
+  optional string suffix = 10 [(buf.validate.field).string.suffix = ".io"];
+  // Becomes an unescaped regex upstream.
+  optional string contains = 11 [(buf.validate.field).string.contains = "."];
+  // Becomes ^pre.*suf$ upstream, which fails across a line break.
+  optional string prefix_and_suffix = 12 [(buf.validate.field).string = {
+    prefix: "pre"
+    suffix: "suf"
+  }];
+  // Not emitted by protoschema-jsonschema.
+  optional string not_contains = 13 [(buf.validate.field).string.not_contains = " "];
+  // A single literal.
+  optional string const_value = 14 [(buf.validate.field).string.const = "fixed"];
+  // A value holding a comma and a space, next to a plain one.
+  optional string in_set = 15 [(buf.validate.field).string = {
+    in: [
+      "a, b",
+      "c"
+    ]
+  }];
+  // Not emitted by protoschema-jsonschema.
+  optional string not_in_set = 16 [(buf.validate.field).string = {
+    not_in: [
+      "x",
+      "y"
+    ]
+  }];
+  // required on a field with presence: "" is a valid set value.
+  optional string nickname = 17 [(buf.validate.field).required = true];
+  // A native rule and a field CEL rule on one field.
+  optional string code = 18 [
+    (buf.validate.field).string.min_len = 2,
+    (buf.validate.field).cel = {
+      id: "string_content.code.no_spaces"
+      message: "code must not contain spaces"
+      expression: "!this.contains(' ')"
+    }
+  ];
+  // uuid next to a pattern: upstream writes the pattern over the uuid one.
+  optional string uuid_pattern = 19 [(buf.validate.field).string = {
+    uuid: true
+    pattern: "^[a-f0-9-]+$"
+  }];
+  // A quote, a backslash, a comment terminator and U+2028 in rule values and
+  // CEL, each escaped for the target it lands in.
+  optional string escaped = 20 [
+    (buf.validate.field).string = {
+      prefix: "\"\\*/"
+      in: [
+        "\"\\*/\u2028",
+        "\"\\*/x"
+      ]
+    },
+    (buf.validate.field).cel = {
+      id: "string_content.escaped"
+      message: "must not end in \"*/\""
+      expression: "!this.endsWith('\"*/')"
+    }
+  ];
+}
+
+// ImplicitCoverage has implicit-presence fields whose zero value breaks a
+// rule. protojson omits zero values, so the rule has to fire for an absent key.
+message ImplicitCoverage {
+  // "" is too short.
+  string short_code = 1 [(buf.validate.field).string.min_len = 3];
+  // 0 is out of range.
+  int32 count = 2 [(buf.validate.field).int32.gt = 0];
+  // [] is too short.
+  repeated string tags = 3 [(buf.validate.field).repeated.min_items = 1];
+  // "" is not an email address.
+  string email = 4 [(buf.validate.field).string.email = true];
+  // required: must not be "".
+  string required_name = 5 [(buf.validate.field).required = true];
+  // required: must not be 0.
+  int32 required_count = 6 [(buf.validate.field).required = true];
+  // required: must be true.
+  bool accepted = 7 [(buf.validate.field).required = true];
+  // required: must not be the zero member.
+  SchemaColor color = 8 [(buf.validate.field).required = true];
+  // required: must not be empty.
+  repeated string required_tags = 9 [(buf.validate.field).required = true];
+  // required: must be present.
+  Item required_item = 10 [(buf.validate.field).required = true];
+}
+
+// BytesCoverage has one field per bytes rule. JSON carries bytes as base64,
+// standard or URL-safe.
+message BytesCoverage {
+  // No rule: only the base64 shape.
+  optional bytes raw = 1;
+  // Byte length, bounded upstream on the base64 length.
+  optional bytes exact_len = 2 [(buf.validate.field).bytes.len = 4];
+  // Byte length, bounded upstream on the base64 length.
+  optional bytes min_len = 3 [(buf.validate.field).bytes.min_len = 2];
+  // Byte length, bounded upstream on the base64 length.
+  optional bytes max_len = 4 [(buf.validate.field).bytes.max_len = 8];
+  // RE2 over the decoded bytes.
+  optional bytes pattern = 5 [(buf.validate.field).bytes.pattern = "^[a-z]+$"];
+  // Over the decoded bytes.
+  optional bytes prefix = 6 [(buf.validate.field).bytes.prefix = "\x01\x02"];
+  // 4 or 16 bytes.
+  optional bytes ip = 7 [(buf.validate.field).bytes.ip = true];
+  // 16 bytes.
+  optional bytes uuid = 8 [(buf.validate.field).bytes.uuid = true];
+  // required on a field with presence: empty bytes are a valid set value.
+  optional bytes required_blob = 9 [(buf.validate.field).required = true];
+}
+
+// NumberCoverage has one field per numeric rule shape, over every JSON
+// number form: int32-family numbers, int64-family strings, floats with NaN.
+message NumberCoverage {
+  // In-range bounds.
+  optional int32 bounded = 1 [(buf.validate.field).int32 = {
+    gt: 0
+    lte: 100
+  }];
+  // Exclusive range: gt above lt means "outside 5..10".
+  optional int32 reversed_range = 2 [(buf.validate.field).int32 = {
+    gt: 10
+    lt: 5
+  }];
+  // A single literal.
+  optional int32 const_value = 3 [(buf.validate.field).int32.const = 7];
+  // A union of literals.
+  optional int32 in_set = 4 [(buf.validate.field).int32 = {
+    in: [
+      1,
+      2,
+      3
+    ]
+  }];
+  // Left to protovalidate.
+  optional int32 not_in_set = 5 [(buf.validate.field).int32 = {
+    not_in: [
+      0,
+      -1
+    ]
+  }];
+  // Unsigned 32-bit, half-open range.
+  optional uint32 unsigned = 6 [(buf.validate.field).uint32 = {
+    gte: 1
+    lt: 65536
+  }];
+  // Zigzag-encoded signed 32-bit.
+  optional sint32 zigzag = 7 [(buf.validate.field).sint32.gte = -128];
+  // Fixed-width unsigned 32-bit.
+  optional fixed32 fixed = 8 [(buf.validate.field).fixed32.lte = 1000];
+  // Fixed-width signed 32-bit.
+  optional sfixed32 signed_fixed = 9 [(buf.validate.field).sfixed32.lt = 0];
+  // Signed 64-bit, a JSON string.
+  optional int64 big = 10 [(buf.validate.field).int64.gt = 0];
+  // Unsigned 64-bit, a JSON string.
+  optional uint64 big_unsigned = 11 [(buf.validate.field).uint64.lte = 1000000];
+  // Rejects NaN and the infinities.
+  optional float ratio = 12 [(buf.validate.field).float.finite = true];
+  // Double with an exclusive lower bound.
+  optional double score = 13 [(buf.validate.field).double.gt = 0];
+  // Double restricted to a set.
+  optional double factor = 14 [(buf.validate.field).double = {
+    in: [
+      0.5,
+      1,
+      2
+    ]
+  }];
+  // A float32 bound: JSON carries the float32 widened to a double.
+  optional float capped = 15 [(buf.validate.field).float.lte = 0.1];
+}
+
+// CollectionCoverage has one field per repeated and map shape.
+message CollectionCoverage {
+  // Item count bounds.
+  repeated string bounded = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 3
+  }];
+  // Left to protovalidate.
+  repeated string unique = 2 [(buf.validate.field).repeated.unique = true];
+  // An element format with no exact equivalent.
+  repeated string links = 3 [(buf.validate.field).repeated.items.string.uri = true];
+  // An element rule with a native equivalent.
+  repeated string names = 4 [(buf.validate.field).repeated.items.string.min_len = 1];
+  // Size, key and value rules on one map.
+  map<string, string> labels = 5 [(buf.validate.field).map = {
+    min_pairs: 1
+    max_pairs: 4
+    keys: {
+      string: {min_len: 2}
+    }
+    values: {
+      string: {uri: true}
+    }
+  }];
+  // JSON keys are strings: "true" and "false".
+  map<bool, string> flags = 6;
+  // JSON keys are strings: decimal integers.
+  map<int32, string> by_number = 7;
+  // A list of messages.
+  repeated Item items = 8;
+  // A map of messages.
+  map<string, Item> items_by_key = 9;
+}
+
+// IgnoreCoverage has rules that are skipped for the zero value, and a field
+// that is never validated.
+message IgnoreCoverage {
+  // "" is valid; any other value must be an email address.
+  string email = 1 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string.email = true
+  ];
+  // 0 is valid; any other value must exceed 5.
+  int32 threshold = 2 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).int32.gt = 5
+  ];
+  // An empty element is valid; any other must be a UUID.
+  repeated string ids = 3 [(buf.validate.field).repeated.items = {
+    ignore: IGNORE_IF_ZERO_VALUE
+    string: {uuid: true}
+  }];
+  // Never validated. protovalidate rejects IGNORE_ALWAYS next to other rules.
+  string never_checked = 4 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+  // An empty value is valid; any other must have three characters.
+  // Upstream reads ignore on the field only, not under map.values.
+  map<string, string> codes = 5 [(buf.validate.field).map.values = {
+    ignore: IGNORE_IF_ZERO_VALUE
+    string: {min_len: 3}
+  }];
+}
+
+// OneofCoverage has both oneof kinds: real oneofs, flattened into the JSON
+// object, and a message-level oneof rule over plain fields.
+message OneofCoverage {
+  // Exactly one of first_name and last_name.
+  option (buf.validate.message).oneof = {
+    fields: [
+      "first_name",
+      "last_name"
+    ]
+    required: true
+  };
+
+  // Exactly one member must be set.
+  oneof contact {
+    option (buf.validate.oneof).required = true;
+    // A member with a rule of its own.
+    string email = 1 [(buf.validate.field).string.email = true];
+    // A member without rules.
+    string phone = 2;
+  }
+  // At most one member may be set.
+  oneof filter {
+    // Free-text query.
+    string query = 3;
+    // Page number.
+    int32 page = 4;
+  }
+  // Part of the message-level oneof rule.
+  optional string first_name = 5;
+  // Part of the message-level oneof rule.
+  optional string last_name = 6;
+}
+
+// WellKnownCoverage has one field per well-known type the JSON shape maps.
+message WellKnownCoverage {
+  // Bounded duration, a JSON string like "1.5s".
+  google.protobuf.Duration timeout = 1 [(buf.validate.field).duration = {
+    gte: {seconds: 1}
+    lte: {seconds: 300}
+  }];
+  // Must be in the future, against the client's clock.
+  google.protobuf.Timestamp expires_at = 2 [(buf.validate.field).timestamp.gt_now = true];
+  // No rule.
+  google.protobuf.Timestamp created_at = 3;
+  // Any restricted to a set of type URLs.
+  google.protobuf.Any detail = 4 [(buf.validate.field).any = {
+    in: ["type.googleapis.com/google.protobuf.Duration"]
+  }];
+  // A JSON object.
+  google.protobuf.Struct metadata = 5;
+  // Any JSON value.
+  google.protobuf.Value value = 6;
+  // A JSON array.
+  google.protobuf.ListValue list = 7;
+  // An empty JSON object.
+  google.protobuf.Empty nothing = 8;
+  // A JSON string of comma-separated paths.
+  google.protobuf.FieldMask update_mask = 9;
+  // A rule on a wrapper applies to the wrapped value.
+  google.protobuf.StringValue label = 10 [(buf.validate.field).string.min_len = 1];
+  // Base64, as bytes.
+  google.protobuf.BytesValue blob = 11;
+  // A JSON string, as int64.
+  google.protobuf.Int64Value big_count = 12;
+  // A JSON number or "NaN", "Infinity", "-Infinity".
+  google.protobuf.DoubleValue ratio = 13;
+  // A JSON boolean.
+  google.protobuf.BoolValue flag = 14;
+  // An enum whose only JSON form is null.
+  google.protobuf.NullValue null_value = 15;
+  // An enum rule on NullValue, whose only JSON form is null.
+  google.protobuf.NullValue checked_null = 16 [(buf.validate.field).enum.defined_only = true];
+  // A JSON number or "NaN", "Infinity", "-Infinity", as float.
+  google.protobuf.FloatValue small_ratio = 17;
+  // A JSON number, as int32.
+  google.protobuf.Int32Value small_count = 18;
+  // A JSON number, as uint32.
+  google.protobuf.UInt32Value unsigned_count = 19;
+  // A JSON string, as uint64.
+  google.protobuf.UInt64Value big_unsigned = 20;
+}
+
+// EnumCoverage has one field per enum rule, and a field without rules.
+message EnumCoverage {
+  // Only declared members.
+  optional SchemaColor defined = 1 [(buf.validate.field).enum.defined_only = true];
+  // Only red or green.
+  optional SchemaColor allowed = 2 [(buf.validate.field).enum = {
+    in: [
+      1,
+      2
+    ]
+  }];
+  // Anything but blue.
+  optional SchemaColor excluded = 3 [(buf.validate.field).enum = {
+    not_in: [3]
+  }];
+  // Only green.
+  optional SchemaColor pinned = 4 [(buf.validate.field).enum.const = 2];
+  // No rule.
+  SchemaColor plain = 5;
+}
+
+// JsonNameCoverage has fields whose JSON name differs from the proto name
+// in ways a naive camelCase conversion gets wrong.
+message JsonNameCoverage {
+  // json_name renames the JSON key; protobuf-es still names the property
+  // externalId.
+  string external_id = 1 [
+    json_name = "extId",
+    (buf.validate.field).string.min_len = 1
+  ];
+  // A digit after the underscore: the JSON name is metric1st.
+  int32 metric_1st = 2 [(buf.validate.field).int32.gte = 0];
+  // The ordinary case: the JSON name is displayName.
+  string display_name = 3 [(buf.validate.field).string.max_len = 64];
+}
+
+// TreeNode refers to itself, directly and through a list.
+message TreeNode {
+  // Must not be empty.
+  string label = 1 [(buf.validate.field).string.min_len = 1];
+  // Self-recursive through a list.
+  repeated TreeNode children = 2;
+  // Self-recursive through a singular field.
+  optional TreeNode parent = 3;
+  // Never evaluated, so it takes any value and closes no cycle.
+  TreeNode skipped = 4 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+}
+
+// Ping and Pong refer to each other: a cycle across two messages.
+message Ping {
+  // Closes the cycle.
+  Pong pong = 1;
+  // A rule inside the cycle.
+  string note = 2 [(buf.validate.field).string.max_len = 140];
+}
+
+// Pong is the other half of the Ping cycle.
+message Pong {
+  // Closes the cycle.
+  Ping ping = 1;
+}
+
+// MessageCelCoverage has a message-level CEL rule spanning two fields, and a
+// nested message with a rule of its own.
+message MessageCelCoverage {
+  // Compares two fields of the message.
+  option (buf.validate.message).cel = {
+    id: "message_cel.low_below_high"
+    message: "low must be below high"
+    expression: "this.low < this.high"
+  };
+
+  // Window is nested to check that nested messages get their own schema.
+  message Window {
+    // Compares two fields of the nested message.
+    option (buf.validate.message).cel = {
+      id: "message_cel.window.ordered"
+      message: "end_minute must be after start_minute"
+      expression: "this.end_minute > this.start_minute"
+    };
+
+    // Minutes past midnight.
+    uint32 start_minute = 1;
+    // Minutes past midnight.
+    uint32 end_minute = 2;
+  }
+
+  // Lower bound.
+  int32 low = 1;
+  // Upper bound.
+  int32 high = 2;
+  // References the nested message.
+  Window window = 3;
+}
+
+// MessageOneofCoverage has implicit fields named by a message-level oneof
+// rule. protovalidate gives such a field IGNORE_IF_ZERO_VALUE, so its zero
+// value passes its own rules.
+message MessageOneofCoverage {
+  // At most one of these.
+  option (buf.validate.message).oneof = {
+    fields: [
+      "code",
+      "label",
+      "tags",
+      "color",
+      "alias"
+    ]
+  };
+
+  // "" passes: the implicit ignore exempts the zero value.
+  string code = 1 [(buf.validate.field).string.min_len = 3];
+  // No rule.
+  string label = 2;
+  // [] passes for the same reason.
+  repeated string tags = 3 [(buf.validate.field).repeated.min_items = 2];
+  // SCHEMA_COLOR_UNSPECIFIED passes for the same reason.
+  SchemaColor color = 4 [(buf.validate.field).enum.defined_only = true];
+  // An ignore of its own replaces the implicit one.
+  string alias = 5 [(buf.validate.field).ignore = IGNORE_ALWAYS];
+}
+
+// EvaluationCoverage has a message rule that fails to evaluate while divisor
+// is 0, the value divisor holds in the message field() checks total in.
+message EvaluationCoverage {
+  // Divides by divisor.
+  option (buf.validate.message).cel = {
+    id: "evaluation.ratio"
+    message: "total / divisor must be at most 100"
+    expression: "this.total / this.divisor <= 100"
+  };
+
+  // 0 makes the message rule fail to evaluate.
+  int32 divisor = 1;
+  // An even number.
+  int32 total = 2 [(buf.validate.field).cel_expression = "this % 2 == 0"];
+}

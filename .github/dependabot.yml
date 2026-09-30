@@ -13,6 +13,27 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    # protobuf-es and protovalidate-es move together. The protoc-gen-es version
+    # in the buf.gen*.yaml files is bumped by hand to match.
+    groups:
+      bufbuild:
+        patterns: ["@bufbuild/*"]
+
+  # The zod3 target's project: Zod stays on 3.
+  - package-ecosystem: npm
+    directory: /internal/testdata/verify-zod3
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: zod
+        update-types: ["version-update:semver-major"]
+    # protobuf-es and protovalidate-es move together. The protoc-gen-es version
+    # in the buf.gen*.yaml files is bumped by hand to match.
+    groups:
+      bufbuild:
+        patterns: ["@bufbuild/*"]
 
   - package-ecosystem: github-actions
     directory: /

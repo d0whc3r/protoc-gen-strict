@@ -10,8 +10,9 @@ import (
 // Rule is one standard buf.validate constraint, flattened to a dotted name and
 // its textual value, e.g. {Kind: "string.min_len", Value: "3"}.
 type Rule struct {
-	Kind  string
-	Value string
+	Kind   string
+	Value  string
+	Values []string // each element of a list rule, e.g. ["a, b", "c"] for string.in; nil otherwise
 }
 
 // TypeRef locates where a message or enum is declared: the proto file, and the
@@ -24,6 +25,7 @@ type TypeRef struct {
 // FieldMetadata is one proto field plus every validation rule on it.
 type FieldMetadata struct {
 	Name       string  // proto field name, e.g. "user_id"
+	JSONName   string  // protojson name, e.g. "userId"; honours json_name
 	ProtoType  string  // "string", "int32", "message:example.v1.Address", "enum:..."
 	Type       TypeRef // declaring file + package-relative name, empty for scalars
 	Repeated   bool
@@ -32,6 +34,8 @@ type FieldMetadata struct {
 	MapValue   string  // value type, set only when IsMap
 	MapValType TypeRef // Type, but for MapValue
 	Optional   bool    // explicit proto3 `optional`
+	Presence   bool    // absent means unset, not the zero value: optional, oneof, message, proto2
+	Ignore     string  // the ignore protovalidate applies, e.g. "IGNORE_IF_ZERO_VALUE"; see parseMessage
 	Required   bool    // (buf.validate.field).required
 	OutputOnly bool    // (google.api.field_behavior) = OUTPUT_ONLY
 	OneofName  string  // enclosing real oneof, empty when the field is not in one

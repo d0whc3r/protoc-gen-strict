@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "google.protobuf.Any.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "title": "Any",
+      "type": "object"
+    },
+    "google.protobuf.Duration.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "duration",
+      "title": "Duration",
+      "type": "string"
+    },
+    "google.protobuf.FieldMask.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Field Mask",
+      "type": "string"
+    },
+    "google.protobuf.Struct.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Struct",
+      "type": "object"
+    },
+    "google.protobuf.Timestamp.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "shop.coverage.v1.WellKnownRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "WellKnownRuleCoverage exercises well-known types and their rule families.",
+      "patternProperties": {
+        "^(after_epoch)$": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp with an absolute lower bound."
+        },
+        "^(expires_at)$": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp that must be in the future."
+        },
+        "^(seen_at)$": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp that must be in the past."
+        },
+        "^(update_mask)$": {
+          "$ref": "#/$defs/google.protobuf.FieldMask.jsonschema.json",
+          "description": "A field mask selecting which fields to write."
+        }
+      },
+      "properties": {
+        "afterEpoch": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp with an absolute lower bound."
+        },
+        "detail": {
+          "$ref": "#/$defs/google.protobuf.Any.jsonschema.json",
+          "description": "Any restricted to a set of type URLs."
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp that must be in the future."
+        },
+        "interval": {
+          "$ref": "#/$defs/google.protobuf.Duration.jsonschema.json",
+          "description": "Duration restricted to a set of values."
+        },
+        "metadata": {
+          "$ref": "#/$defs/google.protobuf.Struct.jsonschema.json",
+          "description": "Unconstrained well-known types the generators still have to map."
+        },
+        "recent": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp within a sliding window around now."
+        },
+        "seenAt": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Timestamp that must be in the past."
+        },
+        "timeout": {
+          "$ref": "#/$defs/google.protobuf.Duration.jsonschema.json",
+          "description": "Bounded duration."
+        },
+        "updateMask": {
+          "$ref": "#/$defs/google.protobuf.FieldMask.jsonschema.json",
+          "description": "A field mask selecting which fields to write."
+        }
+      },
+      "title": "Well Known Rule Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.coverage.v1.WellKnownRuleCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.coverage.v1.WellKnownRuleCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

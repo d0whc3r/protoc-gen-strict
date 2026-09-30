@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "shop.schema.v1.IgnoreCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "IgnoreCoverage has rules that are skipped for the zero value, and a field\n that is never validated.",
+      "patternProperties": {
+        "^(never_checked)$": {
+          "default": "",
+          "description": "Never validated. protovalidate rejects IGNORE_ALWAYS next to other rules.",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "codes": {
+          "additionalProperties": {
+            "minLength": 3,
+            "type": "string"
+          },
+          "description": "An empty value is valid; any other must have three characters.\n Upstream reads ignore on the field only, not under map.values.",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "email": {
+          "default": "",
+          "description": "\"\" is valid; any other value must be an email address.",
+          "format": "email",
+          "type": "string"
+        },
+        "ids": {
+          "description": "An empty element is valid; any other must be a UUID.",
+          "items": {
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "neverChecked": {
+          "default": "",
+          "description": "Never validated. protovalidate rejects IGNORE_ALWAYS next to other rules.",
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "exclusiveMinimum": 5,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "0 is valid; any other value must exceed 5."
+        }
+      },
+      "title": "Ignore Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.IgnoreCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.IgnoreCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "shop.common.v1.Pagination.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Pagination is the page selector shared by every list request.",
+      "patternProperties": {
+        "^(page_size)$": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Number of items per page."
+        },
+        "^(page_token)$": {
+          "description": "Opaque cursor returned by a previous response. Mutually exclusive with page.",
+          "maxLength": 512,
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "properties": {
+        "page": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "1-based page number."
+        },
+        "pageSize": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Number of items per page."
+        },
+        "pageToken": {
+          "description": "Opaque cursor returned by a previous response. Mutually exclusive with page.",
+          "maxLength": 512,
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "title": "Pagination",
+      "type": "object"
+    }
+  },
+  "$id": "shop.common.v1.Pagination.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.common.v1.Pagination.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

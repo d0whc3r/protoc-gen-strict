@@ -1,0 +1,274 @@
+{
+  "$defs": {
+    "shop.catalog.v1.ListProductsRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "ListProductsRequest pages through the catalog.",
+      "patternProperties": {
+        "^(max_price)$": {
+          "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+          "description": "Inclusive upper price bound."
+        },
+        "^(min_price)$": {
+          "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+          "description": "Inclusive lower price bound."
+        },
+        "^(name_contains)$": {
+          "description": "Case-insensitive substring matched against the product name.",
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        "^(order_by)$": {
+          "default": "",
+          "description": "Field to sort by.",
+          "enum": [
+            "",
+            "name",
+            "sku",
+            "created_at",
+            "price"
+          ],
+          "type": "string"
+        },
+        "^(order_direction)$": {
+          "anyOf": [
+            {
+              "pattern": "^SORT_DIRECTION_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SORT_DIRECTION_ASC",
+                "SORT_DIRECTION_DESC"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "Sort direction.",
+          "title": "Sort Direction"
+        }
+      },
+      "properties": {
+        "maxPrice": {
+          "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+          "description": "Inclusive upper price bound."
+        },
+        "minPrice": {
+          "$ref": "#/$defs/shop.common.v1.Money.jsonschema.json",
+          "description": "Inclusive lower price bound."
+        },
+        "nameContains": {
+          "description": "Case-insensitive substring matched against the product name.",
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        "orderBy": {
+          "default": "",
+          "description": "Field to sort by.",
+          "enum": [
+            "",
+            "name",
+            "sku",
+            "created_at",
+            "price"
+          ],
+          "type": "string"
+        },
+        "orderDirection": {
+          "anyOf": [
+            {
+              "pattern": "^SORT_DIRECTION_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SORT_DIRECTION_ASC",
+                "SORT_DIRECTION_DESC"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "Sort direction.",
+          "title": "Sort Direction"
+        },
+        "pagination": {
+          "$ref": "#/$defs/shop.common.v1.Pagination.jsonschema.json",
+          "description": "Page selector."
+        },
+        "statuses": {
+          "description": "Only return products in these states. Empty means all states.",
+          "items": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PRODUCT_STATUS_ACTIVE",
+                  "PRODUCT_STATUS_ARCHIVED",
+                  "PRODUCT_STATUS_DRAFT"
+                ],
+                "type": "string"
+              },
+              {
+                "maximum": 3,
+                "minimum": 1,
+                "type": "integer"
+              }
+            ],
+            "title": "Product Status"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pagination"
+      ],
+      "title": "List Products Request",
+      "type": "object"
+    },
+    "shop.common.v1.Money.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Money is a fixed-point amount, split into whole units and nanos the way\n google.type.Money does.",
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "enum": [
+                "CURRENCY_EUR",
+                "CURRENCY_USD",
+                "CURRENCY_GBP"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ],
+          "description": "The currency of the amount.",
+          "title": "Currency"
+        },
+        "nanos": {
+          "anyOf": [
+            {
+              "maximum": 999999999,
+              "minimum": -999999999,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fractional part in nanos, e.g. 500000000 for 12.50 EUR."
+        },
+        "units": {
+          "anyOf": [
+            {
+              "maximum": 1000000000,
+              "minimum": -1000000000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Whole currency units, e.g. 12 for 12.50 EUR."
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "shop.common.v1.Pagination.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Pagination is the page selector shared by every list request.",
+      "patternProperties": {
+        "^(page_size)$": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Number of items per page."
+        },
+        "^(page_token)$": {
+          "description": "Opaque cursor returned by a previous response. Mutually exclusive with page.",
+          "maxLength": 512,
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "properties": {
+        "page": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "1-based page number."
+        },
+        "pageSize": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Number of items per page."
+        },
+        "pageToken": {
+          "description": "Opaque cursor returned by a previous response. Mutually exclusive with page.",
+          "maxLength": 512,
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "title": "Pagination",
+      "type": "object"
+    }
+  },
+  "$id": "shop.catalog.v1.ListProductsRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.catalog.v1.ListProductsRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

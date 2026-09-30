@@ -2,6 +2,11 @@ bin/
 gen/
 dist/
 internal/testdata/verify/gen/
+internal/testdata/verify/gen-js/
 internal/testdata/verify/node_modules/
 internal/testdata/verify/venv/
 internal/testdata/verify/package-lock.json
+internal/testdata/verify-zod3/gen/
+internal/testdata/verify-zod3/gen-js/
+internal/testdata/verify-zod3/node_modules/
+internal/testdata/verify-zod3/package-lock.json

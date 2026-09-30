@@ -1,6 +1,6 @@
-# Release build for protoc-gen-strict. `make snapshot` runs it locally;
-# .github/workflows/release.yml runs it for real, after release-please has
-# created the tag and the release.
+# Release build for protoc-gen-strict and protoc-gen-strict-schema. `make
+# snapshot` runs it locally; .github/workflows/release.yml runs it for real,
+# after release-please has created the tag and the release.
 version: 2
 
 project_name: protoc-gen-strict
@@ -10,7 +10,9 @@ before:
     - go mod download
 
 builds:
-  - main: ./cmd/protoc-gen-strict
+  - &build
+    id: protoc-gen-strict
+    main: ./cmd/protoc-gen-strict
     env:
       - CGO_ENABLED=0
     goos: [linux, darwin, windows]
@@ -24,6 +26,12 @@ builds:
       - -s -w -X main.version={{ .Version }}
     # Reproducible: the build stamps the commit date, not the clock.
     mod_timestamp: "{{ .CommitTimestamp }}"
+  # The runtime-schema plugin, built the same way. Both binaries ship in the
+  # same archive.
+  - <<: *build
+    id: protoc-gen-strict-schema
+    main: ./cmd/protoc-gen-strict-schema
+    binary: protoc-gen-strict-schema
 
 archives:
   # The archive carries the platform; the binary inside keeps its plain name so
@@ -36,6 +44,8 @@ archives:
     files:
       - LICENSE
       - README.md
+      # Usage lives next to each command.
+      - cmd/*/README.md
 
 checksum:
   name_template: checksums.txt

@@ -17,6 +17,7 @@ func TestIgnoreAlwaysStopsPropagation(t *testing.T) {
 	ignored := parser.FieldMetadata{
 		Name:      "unchecked",
 		ProtoType: "message:" + target,
+		Ignore:    "IGNORE_ALWAYS",
 		Rules:     []parser.Rule{{Kind: "ignore", Value: "IGNORE_ALWAYS"}},
 	}
 	if got := c.narrowingOf(ignored).Target; got != "" {
@@ -28,6 +29,7 @@ func TestIgnoreAlwaysStopsPropagation(t *testing.T) {
 	whenSet := parser.FieldMetadata{
 		Name:      "detail",
 		ProtoType: "message:" + target,
+		Ignore:    "IGNORE_IF_ZERO_VALUE",
 		Rules:     []parser.Rule{{Kind: "ignore", Value: "IGNORE_IF_ZERO_VALUE"}},
 	}
 	if got := c.narrowingOf(whenSet).Target; got != target {

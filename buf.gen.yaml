@@ -19,10 +19,22 @@ plugins:
     opt: target=ts
   - local: ./bin/protoc-gen-strict
     out: gen/typescript
-    opt: paths=source_relative,lang=typescript
+    opt: lang=typescript
     # Without this buf forks the plugin once per directory. A TypeScript
     # narrowing reaches across files, so the shard that could not see its target
     # would silently drop it — and each shard would emit its own strict/types.ts.
+    strategy: all
+
+  # Runtime schemas: JSON Schema, from protoc-gen-jsonschema, which the plugin
+  # runs itself and must find on PATH (`make bootstrap` puts it in ./bin), and
+  # Zod. They land in the TypeScript tree, because the Zod modules import the
+  # descriptors protoc-gen-es wrote. zod3 writes <file>.zod3.ts next to zod's
+  # <file>.zod.ts, so `make verify` compiles both majors in one tree.
+  - local: ./bin/protoc-gen-strict-schema
+    out: gen/typescript
+    opt: target=json+zod+zod3
+    # One process for the run: strict/jsonschema.ts holds the fixes of every
+    # message, and each shard would emit its own.
     strategy: all
 
   # Python.
@@ -32,7 +44,7 @@ plugins:
     out: gen/python
   - local: ./bin/protoc-gen-strict
     out: gen/python
-    opt: paths=source_relative,lang=python
+    opt: lang=python
     strategy: all
 
   # OpenAPI. Not an overlay: one configuration file that hands the rules to
@@ -40,7 +52,7 @@ plugins:
   # because it needs this file to already exist.
   - local: ./bin/protoc-gen-strict
     out: gen/openapiv2
-    opt: paths=source_relative,lang=openapi
+    opt: lang=openapi
     # The keys are fully qualified proto names, so there is a single file for
     # the whole run and nothing per-directory to shard.
     strategy: all

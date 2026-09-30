@@ -1,0 +1,8 @@
+# The bundles protoc-gen-jsonschema writes for ./proto, committed so the golden
+# tests of target=json run without the executable. `make testdata` runs it.
+version: v2
+clean: true
+plugins:
+  - local: ./bin/protoc-gen-jsonschema
+    out: internal/testdata/jsonschema
+    opt: target=json-bundle

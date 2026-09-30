@@ -9,8 +9,8 @@ Requires Go 1.26+ and [`buf`](https://buf.build/docs/installation). `make verify
 also needs npm and python3.
 
 ```sh
-make bootstrap  # install the pinned golangci-lint into ./bin, which `make fmt` and `make lint` need
-make build      # produces ./bin/protoc-gen-strict
+make bootstrap  # install the pinned golangci-lint and protoc-gen-jsonschema into ./bin
+make build      # produces ./bin/protoc-gen-strict and ./bin/protoc-gen-strict-schema
 ```
 
 ## Targets
@@ -19,8 +19,9 @@ make build      # produces ./bin/protoc-gen-strict
 make help       # list every target
 make check      # format, lint, tests, and a real end-to-end run — run this before a PR
 make generate   # run every plugin over ./proto into ./gen/{typescript,python,openapiv2}
-make verify     # compile the generated TypeScript and import the generated Python
+make verify     # compile the generated TypeScript, run the schema checks, import the generated Python
 make snapshot   # build the release archives into ./dist, without tagging
+make npm-pack   # pack the npm packages of that snapshot into ./dist/npm
 make clean      # remove bin/, gen/, dist/ and the verify scratch trees
 ```
 
@@ -36,8 +37,11 @@ diff before accepting it, then run `make testdata-update`. A `.proto` change nee
 
 Golden tests prove the output did not change; they do not prove it is valid.
 `make verify` does that: it runs `tsc --noEmit` over the real protoc-gen-es output
-plus the overlays, and imports the generated Python for real. It needs network,
-npm and python3, so it is not part of `make check`.
+plus the overlays, and imports the generated Python for real. For
+protoc-gen-strict-schema it also runs the JSON Schema checks under ajv and the Zod
+checks against protovalidate-es, once with zod 4 (`internal/testdata/verify`) and
+once with zod 3 (`internal/testdata/verify-zod3`). It needs network, npm and
+python3, so it is not part of `make check`.
 
 CI runs both on every push and pull request; see
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
@@ -61,8 +65,16 @@ Linux, macOS and Windows on amd64 and arm64 and attaches them, with a
 `checksums.txt`. Both steps live in
 [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
+A second job publishes the same binaries to npm: one package per command and
+platform holding the binary, and `@d0whc3r/protoc-gen-strict` and
+`@d0whc3r/protoc-gen-strict-schema`, whose `bin` runs the one npm installed. It
+authenticates with the `NPM_TOKEN` secret, and skips every version already on
+npm, so re-running a failed job resumes. See
+[`npm/publish.mjs`](npm/publish.mjs).
+
 `make snapshot` runs the same build locally, into `./dist`, without tagging or
-publishing anything.
+publishing anything. `make npm-pack` packs its npm packages into `./dist/npm`;
+`npm install` a command's tarball together with its platform's to try one.
 
 ## Internals
 

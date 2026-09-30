@@ -114,11 +114,13 @@ export type ContactPointStrict = Narrow<ContactPoint, {
  *     sint32.gte = -100000
  *     sint32.lte = 100000
  *   purchase_order_id
+ *     ignore = IGNORE_IF_ZERO_VALUE (implied by the message oneof)
  *     string.max_len = 64
  *   customer_order_id
+ *     ignore = IGNORE_IF_ZERO_VALUE (implied by the message oneof)
  *     string.max_len = 64
  *   oneof
- *     oneof: exactly one of purchase_order_id, customer_order_id
+ *     oneof: at most one of purchase_order_id, customer_order_id
  */
 export type StockMovementStrict = Require<Narrow<StockMovement, {
   /**

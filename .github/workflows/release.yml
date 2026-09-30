@@ -11,6 +11,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       # Reads the conventional commits landed since the last tag, and keeps a
       # release PR open with the next version and the CHANGELOG entry. Merging
@@ -48,6 +51,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # The binaries the npm job publishes, and the GoReleaser metadata that
+      # names them. A job of its own, so a failed publish can be re-run without
+      # releasing a second time.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          name: dist
+          path: |
+            dist/artifacts.json
+            dist/metadata.json
+            dist/*/protoc-gen-strict*
+          if-no-files-found: error
+
       # proxy.golang.org caches the version list for up to 30 minutes, so
       # `go install ...@latest` keeps resolving to the previous tag until it
       # expires. Requesting the new tag by name makes the proxy add it now.
@@ -55,3 +71,34 @@ jobs:
         run: curl -fsS "https://proxy.golang.org/github.com/${GITHUB_REPOSITORY}/@v/${TAG}.info"
         env:
           TAG: ${{ steps.release.outputs.tag_name }}
+
+  npm:
+    needs: release
+    if: ${{ needs.release.outputs.release_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # npm provenance, and trusted publishing once it is set up per package.
+      id-token: write
+    steps:
+      # npm/publish.mjs, and the LICENSE and READMEs it packs.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          ref: ${{ needs.release.outputs.tag_name }}
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+
+      # One package per command and platform, then the two command packages.
+      # Skips every version already on npm, so a re-run resumes.
+      - run: node npm/publish.mjs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

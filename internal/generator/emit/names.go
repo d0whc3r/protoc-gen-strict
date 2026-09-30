@@ -52,3 +52,11 @@ func upperASCII(c byte) byte {
 	}
 	return c
 }
+
+// OutputPrefix is where a proto file's outputs go, extensionless: the file's
+// own path without ".proto", e.g. "example/v1/user". protoc-gen-es and
+// protoc-gen-python write there whatever `paths=` says. protogen's
+// GeneratedFilenamePrefix follows the Go import path instead under the default
+// `paths=import`, which would put an overlay under github.com/..., away from the
+// module it imports and from the strict/ modules at the root.
+func OutputPrefix(protoPath string) string { return strings.TrimSuffix(protoPath, ".proto") }

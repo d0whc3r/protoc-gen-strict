@@ -1,0 +1,46 @@
+{
+  "$defs": {
+    "shop.inventory.v1.ContactPoint.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "ContactPoint reaches a person by exactly one channel.",
+      "properties": {
+        "email": {
+          "description": "Email address.",
+          "format": "email",
+          "type": "string"
+        },
+        "extension": {
+          "anyOf": [
+            {
+              "maximum": 9999,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Internal extension number."
+        },
+        "name": {
+          "default": "",
+          "description": "Display name of the contact.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "phone": {
+          "description": "E.164 phone number.",
+          "pattern": "^\\+[1-9][0-9]{7,14}$",
+          "type": "string"
+        }
+      },
+      "title": "Contact Point",
+      "type": "object"
+    }
+  },
+  "$id": "shop.inventory.v1.ContactPoint.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.inventory.v1.ContactPoint.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

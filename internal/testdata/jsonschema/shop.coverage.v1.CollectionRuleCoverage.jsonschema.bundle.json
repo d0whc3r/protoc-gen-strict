@@ -1,0 +1,485 @@
+{
+  "$defs": {
+    "shop.coverage.v1.CollectionRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "CollectionRuleCoverage exercises repeated and map rules, including rules\n applied to the elements rather than the collection.",
+      "properties": {
+        "counters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 2147483648,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "pattern": "^-?[0-9]+$",
+                "type": "string"
+              }
+            ]
+          },
+          "description": "Map with rules on keys, values and size.",
+          "propertyNames": {
+            "minLength": 1,
+            "pattern": "^[a-z_]+$",
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "flavors": {
+          "description": "List whose elements are themselves constrained enums.",
+          "items": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FLAVOR_SWEET",
+                  "FLAVOR_SALTY",
+                  "FLAVOR_SOUR",
+                  "FLAVOR_BITTER"
+                ],
+                "type": "string"
+              },
+              {
+                "maximum": 4,
+                "minimum": 1,
+                "type": "integer"
+              }
+            ],
+            "title": "Flavor"
+          },
+          "type": "array"
+        },
+        "names": {
+          "description": "Bounded, deduplicated list of scalars.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array"
+        },
+        "nested": {
+          "description": "List of messages; element rules cannot reach inside a message, so the\n nested message carries its own rules.",
+          "items": {
+            "$ref": "#/$defs/shop.coverage.v1.StringRuleCoverage.jsonschema.json"
+          },
+          "maxItems": 4,
+          "type": "array"
+        },
+        "readings": {
+          "additionalProperties": {
+            "$ref": "#/$defs/shop.coverage.v1.NumericRuleCoverage.jsonschema.json"
+          },
+          "description": "Map whose values are messages.",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "title": "Collection Rule Coverage",
+      "type": "object"
+    },
+    "shop.coverage.v1.NumericRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "NumericRuleCoverage exercises every numeric rule family. protovalidate\n declares a separate rule message per wire type, so each one is walked\n separately by the parser.",
+      "properties": {
+        "constant": {
+          "anyOf": [
+            {
+              "enum": [
+                42
+              ],
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed value."
+        },
+        "excluded": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Excluded values."
+        },
+        "f32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 4294967296,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width unsigned 32-bit."
+        },
+        "f64": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width unsigned 64-bit."
+        },
+        "factor": {
+          "anyOf": [
+            {
+              "enum": [
+                0.5,
+                1,
+                2
+              ],
+              "type": "number"
+            },
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Double-precision float with a membership rule."
+        },
+        "i32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1000,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Signed 32-bit, exclusive bounds."
+        },
+        "i64": {
+          "anyOf": [
+            {
+              "maximum": 9000,
+              "minimum": -9000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Signed 64-bit, inclusive bounds."
+        },
+        "ratio": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Single-precision float, rejecting NaN and infinities."
+        },
+        "s32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -128,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Zigzag-encoded signed 32-bit."
+        },
+        "s64": {
+          "anyOf": [
+            {
+              "maximum": 1024,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Zigzag-encoded signed 64-bit."
+        },
+        "sf32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 0,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width signed 32-bit."
+        },
+        "sf64": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width signed 64-bit."
+        },
+        "u32": {
+          "anyOf": [
+            {
+              "maximum": 65535,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Unsigned 32-bit."
+        },
+        "u64": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Unsigned 64-bit."
+        }
+      },
+      "title": "Numeric Rule Coverage",
+      "type": "object"
+    },
+    "shop.coverage.v1.StringRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "StringRuleCoverage exercises the string rule family, including the\n well-known format rules that live in a oneof inside StringRules.",
+      "patternProperties": {
+        "^(byte_bounds)$": {
+          "default": "",
+          "description": "Byte length bounds, which differ from character length for non-ASCII.",
+          "maxLength": 128,
+          "type": "string"
+        },
+        "^(exact_len)$": {
+          "default": "",
+          "description": "Exact character length.",
+          "maxLength": 10,
+          "minLength": 10,
+          "type": "string"
+        },
+        "^(header_name)$": {
+          "default": "",
+          "description": "Well-known format: HTTP header name, matched strictly.",
+          "type": "string"
+        },
+        "^(host_and_port)$": {
+          "default": "",
+          "description": "Well-known format: host:port pair.",
+          "pattern": "^([A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|\\[(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)\\]):([1-9][0-9]{0,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+          "type": "string"
+        },
+        "^(ip_prefix)$": {
+          "default": "",
+          "description": "Well-known format: CIDR prefix.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "^(len_bounds)$": {
+          "default": "",
+          "description": "Character length bounds.",
+          "maxLength": 64,
+          "minLength": 2,
+          "type": "string"
+        },
+        "^(uri_ref)$": {
+          "default": "",
+          "description": "Well-known format: relative URI reference.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?:\\/\\/(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "affixes": {
+          "default": "",
+          "description": "Substring rules.",
+          "pattern": "^id_.*-.*_v1$",
+          "type": "string"
+        },
+        "byteBounds": {
+          "default": "",
+          "description": "Byte length bounds, which differ from character length for non-ASCII.",
+          "maxLength": 128,
+          "type": "string"
+        },
+        "constant": {
+          "default": "",
+          "description": "Fixed value.",
+          "enum": [
+            "fixed"
+          ],
+          "type": "string"
+        },
+        "email": {
+          "default": "",
+          "description": "Well-known format: email address.",
+          "format": "email",
+          "type": "string"
+        },
+        "enumerated": {
+          "default": "",
+          "description": "Membership rules.",
+          "enum": [
+            "alpha",
+            "beta",
+            "stable"
+          ],
+          "type": "string"
+        },
+        "exactLen": {
+          "default": "",
+          "description": "Exact character length.",
+          "maxLength": 10,
+          "minLength": 10,
+          "type": "string"
+        },
+        "headerName": {
+          "default": "",
+          "description": "Well-known format: HTTP header name, matched strictly.",
+          "type": "string"
+        },
+        "hostAndPort": {
+          "default": "",
+          "description": "Well-known format: host:port pair.",
+          "pattern": "^([A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|\\[(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)\\]):([1-9][0-9]{0,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+          "type": "string"
+        },
+        "hostname": {
+          "default": "",
+          "description": "Well-known format: hostname.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*$",
+          "type": "string"
+        },
+        "ip": {
+          "default": "",
+          "description": "Well-known format: IP address of either version.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)$",
+          "type": "string"
+        },
+        "ipPrefix": {
+          "default": "",
+          "description": "Well-known format: CIDR prefix.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "ipv4": {
+          "default": "",
+          "description": "Well-known format: IPv4 address.",
+          "format": "ipv4",
+          "type": "string"
+        },
+        "ipv6": {
+          "default": "",
+          "description": "Well-known format: IPv6 address.",
+          "format": "ipv6",
+          "type": "string"
+        },
+        "lenBounds": {
+          "default": "",
+          "description": "Character length bounds.",
+          "maxLength": 64,
+          "minLength": 2,
+          "type": "string"
+        },
+        "pattern": {
+          "default": "",
+          "description": "Must match a regular expression.",
+          "pattern": "^[a-z]+(_[a-z]+)*$",
+          "type": "string"
+        },
+        "tuuid": {
+          "default": "",
+          "description": "Well-known format: trimmed UUID (no dashes).",
+          "pattern": "^[0-9a-fA-F]{32}$",
+          "type": "string"
+        },
+        "uri": {
+          "default": "",
+          "description": "Well-known format: URI.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        },
+        "uriRef": {
+          "default": "",
+          "description": "Well-known format: relative URI reference.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?:\\/\\/(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        },
+        "uuid": {
+          "default": "",
+          "description": "Well-known format: UUID.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "title": "String Rule Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.coverage.v1.CollectionRuleCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.coverage.v1.CollectionRuleCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

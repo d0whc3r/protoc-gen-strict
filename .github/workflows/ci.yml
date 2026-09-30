@@ -40,7 +40,8 @@ jobs:
 
       # The only check that catches an overlay that no longer resolves: it
       # type-checks against the real protoc-gen-es output and imports the real
-      # generated Python. Needs network, npm and python3.
+      # generated Python. It also runs the runtime schemas against
+      # protovalidate-es, under Zod 4 and Zod 3. Needs network, npm and python3.
       - run: make verify
 
   commits:

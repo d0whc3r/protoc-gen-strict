@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "shop.inventory.v1.OpeningHours.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OpeningHours is a daily window expressed in minutes past midnight.",
+      "patternProperties": {
+        "^(closes_at_minute)$": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Closing time, minutes past midnight."
+        },
+        "^(opens_at_minute)$": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Opening time, minutes past midnight."
+        }
+      },
+      "properties": {
+        "closesAtMinute": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Closing time, minutes past midnight."
+        },
+        "opensAtMinute": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Opening time, minutes past midnight."
+        }
+      },
+      "title": "Opening Hours",
+      "type": "object"
+    }
+  },
+  "$id": "shop.inventory.v1.OpeningHours.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.inventory.v1.OpeningHours.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,24 @@
+# The same modules as JavaScript plus declarations, for the checks that the
+# .d.ts files declare what the .ts files infer and that the .js files behave
+# as the .ts ones. `make verify` runs it with --include-imports -o
+# internal/testdata/verify-zod3.
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/d0whc3r/protoc-gen-strict/gen
+plugins:
+  - remote: buf.build/bufbuild/es:v2.15.0
+    out: gen-js
+    opt:
+      - target=js+dts
+      - import_extension=js
+  - local: ./bin/protoc-gen-strict-schema
+    out: gen-js
+    opt:
+      - target=zod3
+      - output=js+dts
+      - import_extension=js
+    strategy: all

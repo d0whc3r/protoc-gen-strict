@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "shop.catalog.v1.DeleteProductRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "DeleteProductRequest removes a product.",
+      "patternProperties": {
+        "^(expected_version)$": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Refuse the delete unless the stored version matches."
+        }
+      },
+      "properties": {
+        "expectedVersion": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "description": "Refuse the delete unless the stored version matches."
+        },
+        "id": {
+          "description": "The product to delete.",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Delete Product Request",
+      "type": "object"
+    }
+  },
+  "$id": "shop.catalog.v1.DeleteProductRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.catalog.v1.DeleteProductRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,127 @@
+{
+  "$defs": {
+    "example.v1.Address.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Address is referenced by User to exercise message-typed fields.",
+      "patternProperties": {
+        "^(postal_code)$": {
+          "default": "",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "properties": {
+        "country": {
+          "default": "",
+          "maxLength": 2,
+          "minLength": 2,
+          "type": "string"
+        },
+        "postalCode": {
+          "default": "",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "title": "Address",
+      "type": "object"
+    },
+    "example.v1.User.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "User demonstrates standard buf.validate rules alongside custom CEL rules.",
+      "patternProperties": {
+        "^(display_name)$": {
+          "default": "",
+          "minLength": 3,
+          "pattern": "^[a-zA-Z0-9_ ]+$",
+          "type": "string"
+        },
+        "^(login_count)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Shorthand CEL form: expression only, id derived from the expression."
+        }
+      },
+      "properties": {
+        "address": {
+          "$ref": "#/$defs/example.v1.Address.jsonschema.json"
+        },
+        "age": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 130,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "displayName": {
+          "default": "",
+          "minLength": 3,
+          "pattern": "^[a-zA-Z0-9_ ]+$",
+          "type": "string"
+        },
+        "email": {
+          "format": "email",
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "description": "Opaque identifier, prefixed to make its origin obvious.",
+          "maxLength": 64,
+          "minLength": 5,
+          "type": "string"
+        },
+        "loginCount": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Shorthand CEL form: expression only, id derived from the expression."
+        },
+        "roles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "title": "User",
+      "type": "object"
+    }
+  },
+  "$id": "example.v1.User.jsonschema.bundle.json",
+  "$ref": "#/$defs/example.v1.User.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

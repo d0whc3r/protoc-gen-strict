@@ -1,0 +1,30 @@
+{
+  "$defs": {
+    "shop.common.v1.LabelSet.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "LabelSet is a bounded set of user-supplied key/value labels.",
+      "properties": {
+        "labels": {
+          "additionalProperties": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "description": "Keys and values are constrained independently by the map rules.",
+          "propertyNames": {
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_-]*$",
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "title": "Label Set",
+      "type": "object"
+    }
+  },
+  "$id": "shop.common.v1.LabelSet.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.common.v1.LabelSet.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

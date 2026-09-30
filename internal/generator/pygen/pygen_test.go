@@ -106,10 +106,11 @@ func generate(t *testing.T, messages []parser.MessageMetadata) string {
 // one carried by mistake narrows harder than protovalidate does.
 func TestConstraintsCarried(t *testing.T) {
 	tests := []struct {
-		name  string
-		rules []parser.Rule
-		want  []string
-		avoid []string
+		name   string
+		rules  []parser.Rule
+		ignore string // FieldMetadata.Ignore, which the parser resolves
+		want   []string
+		avoid  []string
 	}{
 		{
 			name:  "lengths and bounds",
@@ -123,10 +124,11 @@ func TestConstraintsCarried(t *testing.T) {
 		},
 		{
 			// `ignore` says the sibling rules do not always apply.
-			name:  "ignore leaves every rule to runtime",
-			rules: []parser.Rule{{Kind: "ignore", Value: "IGNORE_ALWAYS"}, {Kind: "string.min_len", Value: "3"}},
-			want:  []string{`"string.min_len = 3"`},
-			avoid: []string{"MinLen(3)", "from annotated_types import"},
+			name:   "ignore leaves every rule to runtime",
+			rules:  []parser.Rule{{Kind: "ignore", Value: "IGNORE_ALWAYS"}, {Kind: "string.min_len", Value: "3"}},
+			ignore: "IGNORE_ALWAYS",
+			want:   []string{`"string.min_len = 3"`},
+			avoid:  []string{"MinLen(3)", "from annotated_types import"},
 		},
 		{
 			// protovalidate reads this as "outside 10..20"; the two constructors
@@ -167,7 +169,7 @@ func TestConstraintsCarried(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			out := generate(t, []parser.MessageMetadata{{
 				Name:   "example.v1.User",
-				Fields: []parser.FieldMetadata{{Name: "value", ProtoType: "string", Rules: test.rules}},
+				Fields: []parser.FieldMetadata{{Name: "value", ProtoType: "string", Rules: test.rules, Ignore: test.ignore}},
 			}})
 			for _, want := range test.want {
 				if !strings.Contains(out, want) {

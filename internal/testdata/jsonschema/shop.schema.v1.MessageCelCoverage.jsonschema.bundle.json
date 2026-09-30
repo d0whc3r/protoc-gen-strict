@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "shop.schema.v1.MessageCelCoverage.Window.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Window is nested to check that nested messages get their own schema.",
+      "patternProperties": {
+        "^(end_minute)$": {
+          "anyOf": [
+            {
+              "maximum": 4294967295,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Minutes past midnight."
+        },
+        "^(start_minute)$": {
+          "anyOf": [
+            {
+              "maximum": 4294967295,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Minutes past midnight."
+        }
+      },
+      "properties": {
+        "endMinute": {
+          "anyOf": [
+            {
+              "maximum": 4294967295,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Minutes past midnight."
+        },
+        "startMinute": {
+          "anyOf": [
+            {
+              "maximum": 4294967295,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Minutes past midnight."
+        }
+      },
+      "title": "Window",
+      "type": "object"
+    },
+    "shop.schema.v1.MessageCelCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "MessageCelCoverage has a message-level CEL rule spanning two fields, and a\n nested message with a rule of its own.",
+      "properties": {
+        "high": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Upper bound."
+        },
+        "low": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Lower bound."
+        },
+        "window": {
+          "$ref": "#/$defs/shop.schema.v1.MessageCelCoverage.Window.jsonschema.json",
+          "description": "References the nested message."
+        }
+      },
+      "title": "Message Cel Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.MessageCelCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.MessageCelCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

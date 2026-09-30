@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "shop.coverage.v1.NumericRuleCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "NumericRuleCoverage exercises every numeric rule family. protovalidate\n declares a separate rule message per wire type, so each one is walked\n separately by the parser.",
+      "properties": {
+        "constant": {
+          "anyOf": [
+            {
+              "enum": [
+                42
+              ],
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed value."
+        },
+        "excluded": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Excluded values."
+        },
+        "f32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 4294967296,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width unsigned 32-bit."
+        },
+        "f64": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width unsigned 64-bit."
+        },
+        "factor": {
+          "anyOf": [
+            {
+              "enum": [
+                0.5,
+                1,
+                2
+              ],
+              "type": "number"
+            },
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Double-precision float with a membership rule."
+        },
+        "i32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1000,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Signed 32-bit, exclusive bounds."
+        },
+        "i64": {
+          "anyOf": [
+            {
+              "maximum": 9000,
+              "minimum": -9000,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Signed 64-bit, inclusive bounds."
+        },
+        "ratio": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Single-precision float, rejecting NaN and infinities."
+        },
+        "s32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 2147483648,
+              "minimum": -128,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Zigzag-encoded signed 32-bit."
+        },
+        "s64": {
+          "anyOf": [
+            {
+              "maximum": 1024,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Zigzag-encoded signed 64-bit."
+        },
+        "sf32": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 0,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width signed 32-bit."
+        },
+        "sf64": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Fixed-width signed 64-bit."
+        },
+        "u32": {
+          "anyOf": [
+            {
+              "maximum": 65535,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Unsigned 32-bit."
+        },
+        "u64": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Unsigned 64-bit."
+        }
+      },
+      "title": "Numeric Rule Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.coverage.v1.NumericRuleCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.coverage.v1.NumericRuleCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

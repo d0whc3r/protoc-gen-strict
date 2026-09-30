@@ -1,0 +1,186 @@
+{
+  "$defs": {
+    "shop.schema.v1.FormatCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "FormatCoverage has one field per string well-known format. Every field has\n explicit presence, so a test can set one at a time.",
+      "patternProperties": {
+        "^(header_name)$": {
+          "description": "strict set explicitly: the emitted pattern breaks under the u flag.",
+          "pattern": "^:?[0-9a-zA-Z!#$%\u0026\\'*+-.^_|~\\x60]+$",
+          "type": "string"
+        },
+        "^(header_value)$": {
+          "description": "strict left unset: protoschema-jsonschema emits nothing.",
+          "type": "string"
+        },
+        "^(hiddenHost|hidden_host)$": {
+          "description": "jsonschema:hide. Upstream moves a hidden field into patternProperties,\n where its pattern still rejects a trailing dot.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*$",
+          "type": "string"
+        },
+        "^(host_and_port)$": {
+          "description": "The pattern rejects port 0.",
+          "pattern": "^([A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|\\[(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)\\]):([1-9][0-9]{0,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+          "type": "string"
+        },
+        "^(ip_prefix)$": {
+          "description": "The pattern expects a literal 0 or :: in place of the host bits.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "^(ip_with_prefixlen)$": {
+          "description": "The pattern rejects an embedded IPv4.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "^(ipv4_prefix)$": {
+          "description": "As ip_prefix, IPv4 only.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$",
+          "type": "string"
+        },
+        "^(ipv4_with_prefixlen)$": {
+          "description": "The pattern is looser than protovalidate.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/([0-9]|[12][0-9]|3[0-2])$",
+          "type": "string"
+        },
+        "^(ipv6_prefix)$": {
+          "description": "As ip_prefix, IPv6 only.",
+          "pattern": "^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "^(ipv6_with_prefixlen)$": {
+          "description": "The pattern rejects an embedded IPv4.",
+          "pattern": "^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "^(protobuf_dot_fqn)$": {
+          "description": "A fixed regex protoschema-jsonschema does not emit.",
+          "type": "string"
+        },
+        "^(protobuf_fqn)$": {
+          "description": "A fixed regex protoschema-jsonschema does not emit.",
+          "type": "string"
+        },
+        "^(uri_ref)$": {
+          "description": "As uri, relative references included.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?:\\/\\/(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "address": {
+          "description": "Hostname or IP: inherits both patterns.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)$|^[A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*$",
+          "type": "string"
+        },
+        "email": {
+          "description": "format \"email\" is validator-defined.",
+          "format": "email",
+          "type": "string"
+        },
+        "headerName": {
+          "description": "strict set explicitly: the emitted pattern breaks under the u flag.",
+          "pattern": "^:?[0-9a-zA-Z!#$%\u0026\\'*+-.^_|~\\x60]+$",
+          "type": "string"
+        },
+        "headerValue": {
+          "description": "strict left unset: protoschema-jsonschema emits nothing.",
+          "type": "string"
+        },
+        "hostAndPort": {
+          "description": "The pattern rejects port 0.",
+          "pattern": "^([A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|\\[(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)\\]):([1-9][0-9]{0,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+          "type": "string"
+        },
+        "hostname": {
+          "description": "protoschema-jsonschema's pattern rejects a trailing dot.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}(\\.[A-Za-z0-9-][A-Za-z0-9-]{0,63})*$",
+          "type": "string"
+        },
+        "ip": {
+          "description": "The pattern has no zone ids and no embedded IPv4.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)$",
+          "type": "string"
+        },
+        "ipPrefix": {
+          "description": "The pattern expects a literal 0 or :: in place of the host bits.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "ipWithPrefixlen": {
+          "description": "The pattern rejects an embedded IPv4.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/([0-9]|[12][0-9]|3[0-2])$|^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "ipv4": {
+          "description": "format \"ipv4\" matches protovalidate.",
+          "format": "ipv4",
+          "type": "string"
+        },
+        "ipv4Prefix": {
+          "description": "As ip_prefix, IPv4 only.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}0/([0-9]|[12][0-9]|3[0-2])$",
+          "type": "string"
+        },
+        "ipv4WithPrefixlen": {
+          "description": "The pattern is looser than protovalidate.",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/([0-9]|[12][0-9]|3[0-2])$",
+          "type": "string"
+        },
+        "ipv6": {
+          "description": "format \"ipv6\" is validator-defined.",
+          "format": "ipv6",
+          "type": "string"
+        },
+        "ipv6Prefix": {
+          "description": "As ip_prefix, IPv6 only.",
+          "pattern": "^(([0-9a-fA-F]{1,4}:){1,7}:|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "ipv6WithPrefixlen": {
+          "description": "The pattern rejects an embedded IPv4.",
+          "pattern": "^(([0-9a-fA-F]{1,4}::?){1,7}([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,7}:|:((([0-9a-fA-F]{1,4}:){1,6})?[0-9a-fA-F]{1,4})?|::)/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$",
+          "type": "string"
+        },
+        "protobufDotFqn": {
+          "description": "A fixed regex protoschema-jsonschema does not emit.",
+          "type": "string"
+        },
+        "protobufFqn": {
+          "description": "A fixed regex protoschema-jsonschema does not emit.",
+          "type": "string"
+        },
+        "tuuid": {
+          "description": "A fixed regex, copied verbatim.",
+          "pattern": "^[0-9a-fA-F]{32}$",
+          "type": "string"
+        },
+        "ulid": {
+          "description": "A fixed regex protoschema-jsonschema does not emit.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The pattern rejects mailto:, urn: and userinfo.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        },
+        "uriRef": {
+          "description": "As uri, relative references included.",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?:\\/\\/(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
+          "type": "string"
+        },
+        "uuid": {
+          "description": "A fixed regex, copied verbatim.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "title": "Format Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.FormatCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.FormatCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,21 @@
+{
+  "$defs": {
+    "shop.schema.v1.Item.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Item is the rule-bearing message other fixtures reference. Its empty\n instance is valid, so a reference to it tests presence and nesting only.",
+      "properties": {
+        "text": {
+          "description": "Bounded when set.",
+          "maxLength": 32,
+          "type": "string"
+        }
+      },
+      "title": "Item",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.Item.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.Item.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,114 @@
+{
+  "$defs": {
+    "shop.schema.v1.EnumCoverage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "EnumCoverage has one field per enum rule, and a field without rules.",
+      "properties": {
+        "allowed": {
+          "anyOf": [
+            {
+              "enum": [
+                "SCHEMA_COLOR_RED",
+                "SCHEMA_COLOR_GREEN"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ],
+          "description": "Only red or green.",
+          "title": "Schema Color"
+        },
+        "defined": {
+          "anyOf": [
+            {
+              "enum": [
+                "SCHEMA_COLOR_UNSPECIFIED",
+                "SCHEMA_COLOR_RED",
+                "SCHEMA_COLOR_GREEN",
+                "SCHEMA_COLOR_BLUE"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 3,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "description": "Only declared members.",
+          "title": "Schema Color"
+        },
+        "excluded": {
+          "anyOf": [
+            {
+              "enum": [
+                "SCHEMA_COLOR_UNSPECIFIED",
+                "SCHEMA_COLOR_RED",
+                "SCHEMA_COLOR_GREEN"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "description": "Anything but blue.",
+          "title": "Schema Color"
+        },
+        "pinned": {
+          "anyOf": [
+            {
+              "enum": [
+                "SCHEMA_COLOR_GREEN"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2,
+              "minimum": 2,
+              "type": "integer"
+            }
+          ],
+          "description": "Only green.",
+          "title": "Schema Color"
+        },
+        "plain": {
+          "anyOf": [
+            {
+              "pattern": "^SCHEMA_COLOR_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SCHEMA_COLOR_RED",
+                "SCHEMA_COLOR_GREEN",
+                "SCHEMA_COLOR_BLUE"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "description": "No rule.",
+          "title": "Schema Color"
+        }
+      },
+      "title": "Enum Coverage",
+      "type": "object"
+    }
+  },
+  "$id": "shop.schema.v1.EnumCoverage.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.schema.v1.EnumCoverage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

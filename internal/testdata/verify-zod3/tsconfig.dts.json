@@ -1,0 +1,7 @@
+{
+  // The generated declaration files, checked on their own: the shared
+  // tsconfig skips library checks, and a .d.ts is exactly what it skips.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "skipLibCheck": false },
+  "include": ["gen-js/**/*.d.ts"]
+}

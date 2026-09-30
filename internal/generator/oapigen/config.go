@@ -73,7 +73,7 @@ func WriteConfig(gen *protogen.Plugin, messages []parser.MessageMetadata) {
 func fieldKeywords(field parser.FieldMetadata) []keyword {
 	// `ignore` means the rules do not always apply, so none of them describes
 	// the schema either — the same call fieldNarrowing makes for TypeScript.
-	if _, ok := emit.RuleValue(field, emit.IgnoreRule); ok {
+	if field.Ignore != "" {
 		return nil
 	}
 	// `repeated.items.ignore` says the same of the element rules, which

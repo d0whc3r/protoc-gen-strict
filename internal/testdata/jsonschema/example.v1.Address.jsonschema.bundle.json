@@ -1,0 +1,34 @@
+{
+  "$defs": {
+    "example.v1.Address.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Address is referenced by User to exercise message-typed fields.",
+      "patternProperties": {
+        "^(postal_code)$": {
+          "default": "",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "properties": {
+        "country": {
+          "default": "",
+          "maxLength": 2,
+          "minLength": 2,
+          "type": "string"
+        },
+        "postalCode": {
+          "default": "",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "title": "Address",
+      "type": "object"
+    }
+  },
+  "$id": "example.v1.Address.jsonschema.bundle.json",
+  "$ref": "#/$defs/example.v1.Address.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

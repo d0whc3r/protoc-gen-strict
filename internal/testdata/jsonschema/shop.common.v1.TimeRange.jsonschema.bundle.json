@@ -1,0 +1,33 @@
+{
+  "$defs": {
+    "google.protobuf.Timestamp.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "shop.common.v1.TimeRange.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "TimeRange is a half-open interval [start, end).",
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Exclusive upper bound. Absent means \"open ended\"."
+        },
+        "start": {
+          "$ref": "#/$defs/google.protobuf.Timestamp.jsonschema.json",
+          "description": "Inclusive lower bound."
+        }
+      },
+      "required": [
+        "start"
+      ],
+      "title": "Time Range",
+      "type": "object"
+    }
+  },
+  "$id": "shop.common.v1.TimeRange.jsonschema.bundle.json",
+  "$ref": "#/$defs/shop.common.v1.TimeRange.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
