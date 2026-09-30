@@ -22,6 +22,7 @@ internal/generator/tsgen      IR → TypeScript overlay, plus the shared strict/
 internal/generator/pygen      IR → Python overlay
 internal/generator/oapigen    IR → openapi_config.yaml
 internal/generator/schemagen  IR → <file>.schema.ts (JSON Schema), <file>.zod.ts, <file>.zod3.ts, their strict/ modules
+npm/                          npm packages of both plugins: the bin shim, and the publish script the release runs
 proto/                        fixture protos; `internal/testdata` holds the golden output
 ```
 

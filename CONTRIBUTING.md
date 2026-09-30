@@ -21,6 +21,7 @@ make check      # format, lint, tests, and a real end-to-end run — run this be
 make generate   # run every plugin over ./proto into ./gen/{typescript,python,openapiv2}
 make verify     # compile the generated TypeScript, run the schema checks, import the generated Python
 make snapshot   # build the release archives into ./dist, without tagging
+make npm-pack   # pack the npm packages of that snapshot into ./dist/npm
 make clean      # remove bin/, gen/, dist/ and the verify scratch trees
 ```
 
@@ -64,8 +65,16 @@ Linux, macOS and Windows on amd64 and arm64 and attaches them, with a
 `checksums.txt`. Both steps live in
 [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
+A second job publishes the same binaries to npm: one package per command and
+platform holding the binary, and `@d0whc3r/protoc-gen-strict` and
+`@d0whc3r/protoc-gen-strict-schema`, whose `bin` runs the one npm installed. It
+authenticates with the `NPM_TOKEN` secret, and skips every version already on
+npm, so re-running a failed job resumes. See
+[`npm/publish.mjs`](npm/publish.mjs).
+
 `make snapshot` runs the same build locally, into `./dist`, without tagging or
-publishing anything.
+publishing anything. `make npm-pack` packs its npm packages into `./dist/npm`;
+`npm install` a command's tarball together with its platform's to try one.
 
 ## Internals
 

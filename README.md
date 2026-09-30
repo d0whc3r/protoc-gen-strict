@@ -48,8 +48,10 @@ shows up as a diff in your next `buf generate` instead of quietly disappearing.
 
 ## Plugins
 
-Two binaries, both in the same release archive. Each README covers install,
-the `buf.gen.yaml` entries, every option and what lands where.
+Two binaries, both in the same release archive, and on npm as
+`@d0whc3r/protoc-gen-strict` and `@d0whc3r/protoc-gen-strict-schema`. Each
+README covers install, the `buf.gen.yaml` entries, every option and what lands
+where.
 
 | Plugin                                                             | Emits                                                                             |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------------- |

@@ -15,6 +15,16 @@ go install github.com/d0whc3r/protoc-gen-strict/cmd/protoc-gen-strict@latest
 That puts `protoc-gen-strict` in `$(go env GOPATH)/bin`, which needs to be on
 your `PATH` when `buf` runs.
 
+Or, in a JavaScript project, from npm:
+
+```sh
+npm install --save-dev @d0whc3r/protoc-gen-strict
+```
+
+npm installs the prebuilt binary for the machine, Linux, macOS or Windows on x64
+or arm64, and links `protoc-gen-strict` into `node_modules/.bin`. Run buf from an
+npm script or as `npx buf generate`, which put that directory on buf's `PATH`.
+
 Or take a prebuilt binary for Linux, macOS or Windows from the
 [releases page](https://github.com/d0whc3r/protoc-gen-strict/releases). Unpack it
 onto your `PATH` **under its own name**: protoc and buf resolve a plugin by

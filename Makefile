@@ -21,6 +21,10 @@ build: ## Compile both plugin binaries into ./bin.
 snapshot: ## Build the release archives into ./dist — no tag, no publish.
 	goreleaser release --snapshot --clean
 
+.PHONY: npm-pack
+npm-pack: snapshot ## Pack the npm packages of the snapshot into ./dist/npm — no publish.
+	node npm/publish.mjs --pack
+
 .PHONY: generate
 generate: build install/protoc-gen-jsonschema ## Run every plugin over ./proto into ./gen/{typescript,python,openapiv2}.
 	@rm -rf gen  # buf's `clean` only empties each `out`, not a tree a layout change left behind

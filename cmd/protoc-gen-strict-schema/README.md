@@ -12,6 +12,17 @@ checked by protovalidate-es where Zod cannot say a rule exactly.
 go install github.com/d0whc3r/protoc-gen-strict/cmd/protoc-gen-strict-schema@latest
 ```
 
+Or, in a JavaScript project, from npm:
+
+```sh
+npm install --save-dev @d0whc3r/protoc-gen-strict-schema
+```
+
+npm installs the prebuilt binary for the machine, Linux, macOS or Windows on x64
+or arm64, and links `protoc-gen-strict-schema` into `node_modules/.bin`. Run buf
+from an npm script or as `npx buf generate`, which put that directory on buf's
+`PATH`.
+
 Or take it from the [release archive](https://github.com/d0whc3r/protoc-gen-strict/releases),
 which carries both binaries. Keep the name when you put it on your `PATH`: buf
 resolves the plugin by it.
@@ -23,7 +34,8 @@ install with `go install`.
 job: the plugin reads a `CodeGeneratorRequest` on stdin.
 
 `target=json` also needs protoschema-plugins' `protoc-gen-jsonschema` at the
-version the plugin was written against, on the `PATH` buf runs it with:
+version the plugin was written against, on the `PATH` buf runs it with. The npm
+package does not carry it:
 
 ```sh
 go install github.com/bufbuild/protoschema-plugins/cmd/protoc-gen-jsonschema@v0.6.0
